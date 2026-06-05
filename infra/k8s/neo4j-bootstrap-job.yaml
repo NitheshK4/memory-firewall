@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neo4j-bootstrap
+spec:
+  template:
+    metadata:
+      labels:
+        app: neo4j-bootstrap
+    spec:
+      containers:
+        - name: bootstrap
+          image: neo4j:5.22
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for Neo4j to accept connections..."
+              until cypher-shell -a bolt://neo4j:7687 -u neo4j -p password "RETURN 1" >/dev/null 2>&1; do
+                sleep 2
+              done
+              echo "Neo4j is up. Applying constraints..."
+              cypher-shell -a bolt://neo4j:7687 -u neo4j -p password -f /var/lib/neo4j/import/constraints.cypher
+              echo "Constraints applied successfully."
+          volumeMounts:
+            - name: neo4j-constraints-vol
+              mountPath: /var/lib/neo4j/import
+      volumes:
+        - name: neo4j-constraints-vol
+          configMap:
+            name: neo4j-constraints
+      restartPolicy: OnFailure
