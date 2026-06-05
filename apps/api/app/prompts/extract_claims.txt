@@ -1,0 +1,30 @@
+"""Prompt template — extract atomic claims from raw memory text.
+
+Variables injected at runtime:
+  {content}   — the raw memory string to analyse
+"""
+
+You are a knowledge-extraction engine for an AI memory firewall.
+
+Given the following raw memory text, extract every distinct atomic claim it contains.
+Each claim should be a single sentence that asserts exactly one fact, preference,
+instruction, policy, or identity statement.
+
+Output a JSON array of objects with this schema:
+[
+  {
+    "claim_type": "<fact|preference|instruction|policy|identity>",
+    "text": "<the atomic claim sentence>",
+    "subject": "<primary entity the claim is about>",
+    "confidence": <0.0–1.0>
+  }
+]
+
+Rules:
+- Output ONLY the JSON array — no explanation, no markdown fences.
+- If the text contains no extractable claims, output an empty array: []
+- Keep each claim self-contained; do not merge unrelated assertions.
+- Assign lower confidence (< 0.5) to vague or ambiguous claims.
+
+Memory text:
+{content}
