@@ -1,0 +1,89 @@
+-- Memory Firewall – PostgreSQL initialisation script
+-- Run once on a fresh database (idempotent via IF NOT EXISTS).
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgvector";
+
+-- -------------------------------------------------------------------------
+-- memories
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS memories (
+    memory_id       UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    raw_content     TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'allowed'
+                        CHECK (status IN ('allowed','low_trust','quarantined','blocked')),
+    trust_score     FLOAT NOT NULL DEFAULT 0.5 CHECK (trust_score BETWEEN 0 AND 1),
+    flags           TEXT[] NOT NULL DEFAULT '{}',
+    contradictions  TEXT[] NOT NULL DEFAULT '{}',
+    embedding       VECTOR(1536),          -- OpenAI text-embedding-3-small dimension
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_status      ON memories (status);
+CREATE INDEX IF NOT EXISTS idx_memories_created_at  ON memories (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memories_embedding   ON memories USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 100);
+
+-- -------------------------------------------------------------------------
+-- claims
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS claims (
+    claim_id    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    memory_id   UUID NOT NULL REFERENCES memories (memory_id) ON DELETE CASCADE,
+    claim_type  TEXT NOT NULL
+                    CHECK (claim_type IN ('fact','preference','instruction','policy','identity')),
+    text        TEXT NOT NULL,
+    subject     TEXT NOT NULL,
+    confidence  FLOAT NOT NULL DEFAULT 0.65 CHECK (confidence BETWEEN 0 AND 1)
+);
+
+CREATE INDEX IF NOT EXISTS idx_claims_memory_id ON claims (memory_id);
+
+-- -------------------------------------------------------------------------
+-- provenance
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS provenance (
+    provenance_id   UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    memory_id       UUID NOT NULL UNIQUE REFERENCES memories (memory_id) ON DELETE CASCADE,
+    source_type     TEXT NOT NULL,
+    source_id       TEXT,
+    actor           TEXT NOT NULL,
+    authority_level TEXT NOT NULL DEFAULT 'medium'
+                        CHECK (authority_level IN ('low','medium','high')),
+    authority_score FLOAT NOT NULL DEFAULT 0.6 CHECK (authority_score BETWEEN 0 AND 1),
+    metadata        JSONB NOT NULL DEFAULT '{}',
+    collected_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- -------------------------------------------------------------------------
+-- audit_log
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_log (
+    entry_id    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    memory_id   UUID NOT NULL,
+    event       TEXT NOT NULL,
+    actor       TEXT NOT NULL DEFAULT 'system',
+    detail      TEXT NOT NULL DEFAULT '',
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_memory_id   ON audit_log (memory_id);
+CREATE INDEX IF NOT EXISTS idx_audit_occurred_at ON audit_log (occurred_at DESC);
+
+-- -------------------------------------------------------------------------
+-- policy_rules
+-- -------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS policy_rules (
+    rule_id         TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    description     TEXT NOT NULL DEFAULT '',
+    scope           TEXT NOT NULL DEFAULT 'global',
+    scope_value     TEXT,
+    condition_flags TEXT[] NOT NULL DEFAULT '{}',
+    min_risk_score  FLOAT,
+    action          TEXT NOT NULL DEFAULT 'quarantine',
+    priority        INT NOT NULL DEFAULT 100,
+    enabled         BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
