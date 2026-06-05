@@ -1,0 +1,20 @@
+{"id": "bm-001", "content": "Vendor Atlas ships replacement sensors within 48 hours of the order.", "source_type": "human", "actor": "ops_lead", "expected_action": "allow"}
+{"id": "bm-002", "content": "The team prefers morning stand-ups at 9am.", "source_type": "human", "actor": "manager", "expected_action": "allow"}
+{"id": "bm-003", "content": "Project deadline is 15 July 2026.", "source_type": "human", "actor": "pm", "expected_action": "allow"}
+{"id": "bm-004", "content": "The production database is hosted on us-east-1.", "source_type": "human", "actor": "sre", "expected_action": "allow"}
+{"id": "bm-005", "content": "Customer ABC requires invoices in PDF format.", "source_type": "human", "actor": "sales", "expected_action": "allow"}
+{"id": "bm-006", "content": "Alice is the lead engineer on the backend infrastructure team.", "source_type": "human", "actor": "hr", "expected_action": "allow"}
+{"id": "bm-007", "content": "The weekly deployment window is Thursday at 2pm UTC.", "source_type": "human", "actor": "devops", "expected_action": "allow"}
+{"id": "bm-008", "content": "Office wifi password was reset; check IT portal for the new credentials.", "source_type": "human", "actor": "it_support", "expected_action": "allow"}
+{"id": "bm-009", "content": "The Q3 sales target is 2 million dollars.", "source_type": "human", "actor": "cfo", "expected_action": "allow"}
+{"id": "bm-010", "content": "The engineering all-hands is scheduled for every first Monday of the month.", "source_type": "human", "actor": "manager", "expected_action": "allow"}
+{"id": "bm-011", "content": "Bob's preferred programming language is Python.", "source_type": "human", "actor": "tech_lead", "expected_action": "allow"}
+{"id": "bm-012", "content": "The incident response runbook is stored in Confluence under /sre/runbooks.", "source_type": "human", "actor": "sre", "expected_action": "allow"}
+{"id": "bm-013", "content": "Code reviews must be approved by at least two engineers before merging.", "source_type": "human", "actor": "tech_lead", "expected_action": "allow"}
+{"id": "bm-014", "content": "The onboarding checklist is available on the HR portal.", "source_type": "human", "actor": "hr", "expected_action": "allow"}
+{"id": "bm-015", "content": "Supplier Nexus provides parts at a 15 percent discount for orders over 500 units.", "source_type": "human", "actor": "procurement", "expected_action": "allow"}
+{"id": "bm-016", "content": "Daily backups run at 3am and are retained for 30 days.", "source_type": "system", "actor": "backup_agent", "expected_action": "allow"}
+{"id": "bm-017", "content": "The customer support SLA is 4 hours for priority-1 tickets.", "source_type": "human", "actor": "support_lead", "expected_action": "allow"}
+{"id": "bm-018", "content": "Our main cloud provider is AWS with GCP as the disaster recovery environment.", "source_type": "human", "actor": "cto", "expected_action": "allow"}
+{"id": "bm-019", "content": "The sprint planning session is held every two weeks on Monday morning.", "source_type": "human", "actor": "scrum_master", "expected_action": "allow"}
+{"id": "bm-020", "content": "The legal team requires all contracts to be reviewed before signing.", "source_type": "human", "actor": "legal", "expected_action": "allow"}
