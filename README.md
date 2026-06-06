@@ -240,3 +240,4 @@ flowchart TD
 - The claim extractor currently uses deterministic heuristics. This is deliberate
   so the project demos cleanly even without an API key.
 
+#end
