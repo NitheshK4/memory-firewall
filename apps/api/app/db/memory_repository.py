@@ -86,4 +86,21 @@ class InMemoryMemoryRepository:
         self._memories[memory_id] = memory
         return memory.model_copy(deep=True)
 
+    def block(self, memory_id: str, actor: str = "api") -> StoredMemory | None:
+        """Soft-delete a memory by marking it BLOCKED and removing it from the vector index.
+
+        The record is retained in the store so the audit trail and review
+        decisions remain intact; it simply stops appearing in retrievals.
+
+        Returns the updated :class:`StoredMemory`, or ``None`` if not found.
+        """
+        memory = self._memories.get(memory_id)
+        if memory is None:
+            return None
+        memory.status = MemoryStatus.BLOCKED
+        memory.flags.append(f"blocked_by:{actor}")
+        self._vector_store.delete(memory_id)
+        self._memories[memory_id] = memory
+        return memory.model_copy(deep=True)
+
 
