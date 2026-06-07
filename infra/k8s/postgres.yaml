@@ -138,6 +138,28 @@ spec:
               mountPath: /var/lib/postgresql/data
             - name: postgres-init-vol
               mountPath: /docker-entrypoint-initdb.d
+          # edited by Nithesh kumar on 2026-06-07
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - memory_firewall
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+                - -d
+                - memory_firewall
+            initialDelaySeconds: 10
+            periodSeconds: 20
+
       volumes:
         - name: postgres-db-vol
           persistentVolumeClaim:

@@ -21,6 +21,19 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
+          # edited by Nithesh kumar on 2026-06-07
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
           envFrom:
             - configMapRef:
                 name: memory-firewall-config

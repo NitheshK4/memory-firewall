@@ -66,6 +66,20 @@ spec:
           volumeMounts:
             - name: neo4j-data-vol
               mountPath: /data
+          # edited by Nithesh kumar on 2026-06-07
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
       volumes:
         - name: neo4j-data-vol
           persistentVolumeClaim:
