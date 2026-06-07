@@ -13,6 +13,8 @@ class RetrievalService:
         for memory, similarity in candidates:
             if memory.status in {MemoryStatus.BLOCKED, MemoryStatus.QUARANTINED}:
                 continue
+            if request.min_trust_score > 0.0 and memory.trust_score < request.min_trust_score:
+                continue
             results.append(
                 self._build_result(memory, similarity)
             )

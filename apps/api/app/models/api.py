@@ -38,6 +38,12 @@ class RetrievalRequest(BaseModel):
     query: str = Field(min_length=1)
     actor: str = Field(default="unknown")
     max_results: int = Field(default=5, ge=1, le=20)
+    min_trust_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Exclude results whose trust_score is below this threshold (0 = no filter).",
+    )
 
 
 class RetrievalResult(BaseModel):
