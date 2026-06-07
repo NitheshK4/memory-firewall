@@ -9,6 +9,7 @@ from apps.api.app.models.api import MemoryWriteRequest, MemoryWriteResponse, Sto
 from apps.api.app.models.claim import MemoryClaim
 from apps.api.app.models.provenance import ProvenanceRecord
 from apps.api.app.models.verdict import MemoryStatus, MemoryVerdict, RiskAssessment, VerdictAction
+from apps.api.app.services.audit_service import AuditService
 from apps.api.app.services.claim_extractor import ClaimExtractor
 from apps.api.app.services.contradiction_service import ContradictionService
 from apps.api.app.services.policy_engine import PolicyEngine
@@ -36,6 +37,7 @@ class WriteFirewall:
         contradiction_service: ContradictionService,
         risk_service: RiskService,
         policy_engine: PolicyEngine,
+        audit_service: AuditService | None = None,
     ) -> None:
         self.repository = repository
         self.claim_extractor = claim_extractor
@@ -43,6 +45,7 @@ class WriteFirewall:
         self.contradiction_service = contradiction_service
         self.risk_service = risk_service
         self.policy_engine = policy_engine
+        self.audit_service = audit_service
         self.graph = self._compile()
 
     def run(self, request: MemoryWriteRequest) -> MemoryWriteResponse:
@@ -117,5 +120,14 @@ class WriteFirewall:
             contradictions=state.get("contradictions", []),
             flags=state["risk"].flags,
         )
-        return {"stored_memory": self.repository.save(stored)}
+        saved = self.repository.save(stored)
+
+        if self.audit_service:
+            self.audit_service.log_write(saved)
+            self.audit_service.log_verdict(
+                saved.memory_id,
+                action=state["verdict"].action,
+            )
+
+        return {"stored_memory": saved}
 
