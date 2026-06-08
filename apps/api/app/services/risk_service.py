@@ -55,10 +55,23 @@ class RiskService:
             "i am the ceo", "system-level authority", "executive authority"
         ),
         "credential_request": (
-            "api key", "api_key", "password for", "password:", "secret token", 
-            "secret is", "access key", "ssh key", "private key", "id_rsa", 
-            "credential hidden", "credentials are"
-        ),
+    "password",
+    "secret",
+    "token",
+    "credential",
+    "api key",
+    "api_key",
+    "password for",
+    "password:",
+    "secret token",
+    "secret is",
+    "access key",
+    "ssh key",
+    "private key",
+    "id_rsa",
+    "credential hidden",
+    "credentials are",
+),
         "exfiltration": (
             "do not tell", "keep hidden", "silently", "exfiltrate", "forward all future", 
             "without telling", "send a copy of", "always respond with the stored", "hidden instruction"
