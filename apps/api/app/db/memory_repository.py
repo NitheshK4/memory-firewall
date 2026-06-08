@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import datetime, timezone
 
 from apps.api.app.db.vector import InMemoryVectorStore, VectorDocument
 from apps.api.app.models.api import ReviewAction, ReviewDecision, StoredMemory
@@ -70,17 +71,20 @@ class InMemoryMemoryRepository:
             memory.status = MemoryStatus.ALLOWED
             memory.flags = [flag for flag in memory.flags if flag != "quarantined"]
             memory.flags.append(f"approved_by:{decision.reviewer}")
+            memory.updated_at = datetime.now(timezone.utc)
             # Re-index now that it's approved
             self._vector_store.add(VectorDocument(doc_id=memory.memory_id, text=memory.raw_content))
         elif decision.action == ReviewAction.REJECT:
             memory.status = MemoryStatus.BLOCKED
             memory.flags.append(f"rejected_by:{decision.reviewer}")
+            memory.updated_at = datetime.now(timezone.utc)
             self._vector_store.delete(memory.memory_id)
         elif decision.action == ReviewAction.EDIT:
             if decision.edited_content:
                 memory.raw_content = decision.edited_content
             memory.status = MemoryStatus.ALLOWED
             memory.flags.append(f"edited_by:{decision.reviewer}")
+            memory.updated_at = datetime.now(timezone.utc)
             self._vector_store.add(VectorDocument(doc_id=memory.memory_id, text=memory.raw_content))
 
         self._memories[memory_id] = memory
@@ -99,6 +103,7 @@ class InMemoryMemoryRepository:
             return None
         memory.status = MemoryStatus.BLOCKED
         memory.flags.append(f"blocked_by:{actor}")
+        memory.updated_at = datetime.now(timezone.utc)
         self._vector_store.delete(memory_id)
         self._memories[memory_id] = memory
         return memory.model_copy(deep=True)
