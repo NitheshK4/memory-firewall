@@ -51,8 +51,9 @@ def build_components():
     )
     for content, source_type, actor in SEED_MEMORIES:
         write_fw.run(MemoryWriteRequest(content=content, source_type=source_type, actor=actor))
-
-    read_fw = ReadFirewall(repository=repo, retrieval_service=RetrievalService())
+    read_fw = ReadFirewall(
+    retrieval_service=RetrievalService(repository=repo)
+)
     return read_fw
 
 
