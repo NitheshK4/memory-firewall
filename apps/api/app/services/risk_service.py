@@ -33,6 +33,9 @@ class RiskService:
     pattern-matching flags for belt-and-suspenders coverage.
     Falls back to heuristic-only on any LLM failure.
     """
+    
+    def __init__(self, settings=None) -> None:
+        self._settings = settings
 
     PATTERN_FLAGS = {
         "policy_bypass": ("ignore previous", "override policy", "skip approval", "disable guardrail"),
