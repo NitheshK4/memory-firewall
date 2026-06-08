@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from apps.api.app.models.api import ReviewDecision, StoredMemory
 from apps.api.app.models.verdict import VerdictAction
+
+# Default burst-detection thresholds (can be overridden on construction).
+_DEFAULT_BURST_WINDOW_SECONDS = 60
+_DEFAULT_BURST_MAX_WRITES = 10
 
 
 class AuditEntry:
@@ -42,10 +46,19 @@ class AuditService:
 
     Records every significant action (write, verdict, review, quarantine)
     keyed by memory_id for quick retrieval.
+
+    Also tracks write activity per actor so callers can detect burst-write
+    patterns that may indicate a memory-flooding or poisoning attempt.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        burst_window_seconds: int = _DEFAULT_BURST_WINDOW_SECONDS,
+        burst_max_writes: int = _DEFAULT_BURST_MAX_WRITES,
+    ) -> None:
         self._log: list[AuditEntry] = []
+        self._burst_window = timedelta(seconds=burst_window_seconds)
+        self._burst_max_writes = burst_max_writes
 
     # ------------------------------------------------------------------ #
     # Recording helpers
@@ -76,6 +89,40 @@ class AuditService:
     def log_retrieval(self, memory_id: str, actor: str, suppressed: bool = False) -> None:
         event = "retrieval_suppressed" if suppressed else "retrieval_served"
         self._append(memory_id, event=event, actor=actor)
+
+    # ------------------------------------------------------------------ #
+    # Burst detection
+    # ------------------------------------------------------------------ #
+
+    def check_burst_write(self, actor: str) -> bool:
+        """Return True if *actor* has exceeded the burst write threshold.
+
+        Counts ``memory_written`` events attributed to *actor* within the
+        configured rolling window.  Callers should treat a ``True`` return
+        as a signal to increase risk scoring or quarantine the incoming write.
+        """
+        now = datetime.now(timezone.utc)
+        cutoff = now - self._burst_window
+        recent_writes = [
+            entry
+            for entry in self._log
+            if entry.actor == actor
+            and entry.event == "memory_written"
+            and entry.occurred_at >= cutoff
+        ]
+        return len(recent_writes) >= self._burst_max_writes
+
+    def burst_write_count(self, actor: str) -> int:
+        """Return the number of memory writes by *actor* in the current window."""
+        now = datetime.now(timezone.utc)
+        cutoff = now - self._burst_window
+        return sum(
+            1
+            for entry in self._log
+            if entry.actor == actor
+            and entry.event == "memory_written"
+            and entry.occurred_at >= cutoff
+        )
 
     # ------------------------------------------------------------------ #
     # Query helpers
