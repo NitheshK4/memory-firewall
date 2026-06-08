@@ -22,8 +22,16 @@ def apply_review(
     _auth: None = Depends(require_api_key),
     container: ServiceContainer = Depends(get_container),
 ) -> StoredMemory:
+    """Apply a human review decision to a quarantined memory.
+
+    Records the decision in the audit log regardless of outcome so the full
+    review history is always available via ``GET /api/v1/audit``.
+    """
     memory = container.quarantine_service.apply_decision(memory_id, decision)
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
+    if container.audit_service:
+        container.audit_service.log_review(memory_id, decision)
     return memory
+
 

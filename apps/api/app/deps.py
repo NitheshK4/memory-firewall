@@ -40,8 +40,8 @@ def get_container() -> ServiceContainer:
     risk_service = RiskService(settings=settings)   # pass settings for LLM scoring
     policy_engine = PolicyEngine()
     retrieval_service = RetrievalService(repository)
-    quarantine_service = QuarantineService(repository)
     audit_service = AuditService()
+    quarantine_service = QuarantineService(repository, audit_service=audit_service)
 
     write_firewall = WriteFirewall(
         repository=repository,
