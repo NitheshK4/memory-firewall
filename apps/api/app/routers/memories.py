@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from apps.api.app.auth import require_api_key
 from apps.api.app.deps import ServiceContainer, get_container
@@ -6,6 +7,15 @@ from apps.api.app.models.api import MemoryWriteRequest, MemoryWriteResponse, Sto
 from apps.api.app.models.verdict import MemoryStatus
 
 router = APIRouter(prefix="/memories", tags=["memories"])
+
+
+class MemoryListResponse(BaseModel):
+    """Paginated list of stored memories with total count metadata."""
+
+    total: int
+    offset: int
+    limit: int
+    items: list[StoredMemory]
 
 
 @router.post("", response_model=MemoryWriteResponse)
@@ -17,13 +27,23 @@ def write_memory(
     return container.write_firewall.run(request)
 
 
-@router.get("", response_model=list[StoredMemory])
+@router.get("", response_model=MemoryListResponse)
 def list_memories(
     status: MemoryStatus | None = None,
+    limit: int = Query(default=50, ge=1, le=200, description="Maximum number of records to return."),
+    offset: int = Query(default=0, ge=0, description="Number of records to skip before returning results."),
     _auth: None = Depends(require_api_key),
     container: ServiceContainer = Depends(get_container),
-) -> list[StoredMemory]:
-    return container.repository.list_memories(status=status)
+) -> MemoryListResponse:
+    """List memories with optional status filter and pagination.
+
+    Returns an envelope containing ``total`` (count before pagination),
+    ``offset``, ``limit``, and ``items`` (the page of records).
+    """
+    all_memories = container.repository.list_memories(status=status)
+    total = len(all_memories)
+    page = all_memories[offset : offset + limit]
+    return MemoryListResponse(total=total, offset=offset, limit=limit, items=page)
 
 
 @router.get("/{memory_id}", response_model=StoredMemory)
