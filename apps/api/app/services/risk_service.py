@@ -33,112 +33,103 @@ class RiskService:
     pattern-matching flags for belt-and-suspenders coverage.
     Falls back to heuristic-only on any LLM failure.
     """
+    
+    def __init__(self, settings=None) -> None:
+        self._settings = settings
 
     PATTERN_FLAGS = {
         "policy_bypass": ("ignore previous", "override policy", "skip approval", "disable guardrail"),
         "authority_injection": ("always trust", "act as admin", "system says", "authorized by"),
         "credential_request": ("password", "api key", "secret", "token", "credential"),
         "exfiltration": ("do not tell", "keep hidden", "silently", "exfiltrate"),
+        "policy_bypass": (
+            "ignore previous", "override policy", "skip approval", "disable guardrail", 
+            "disable all guardrail", "disable guardrails", "bypass all security", 
+            "stop quarantining", "ignore all future", "skip all human", 
+            "policy filters should be disabled", "disable the memory firewall",
+            "compliance rules are suspended", "never block emails", "update policy:"
+        ),
+        "authority_injection": (
+            "always trust", "act as admin", "system says", "authorized by", 
+            "i am the system administrator", "granted admin access", "grant full trust", 
+            "i am the ceo", "system-level authority", "executive authority"
+        ),
+        "credential_request": (
+    "password",
+    "secret",
+    "token",
+    "credential",
+    "api key",
+    "api_key",
+    "password for",
+    "password:",
+    "secret token",
+    "secret is",
+    "access key",
+    "ssh key",
+    "private key",
+    "id_rsa",
+    "credential hidden",
+    "credentials are",
+),
+        "exfiltration": (
+            "do not tell", "keep hidden", "silently", "exfiltrate", "forward all future", 
+            "without telling", "send a copy of", "always respond with the stored", "hidden instruction"
+        ),
     }
-
-    def __init__(self, settings=None) -> None:
-        """Accept optional settings to enable LLM scoring."""
-        self._settings = settings
-        self._prompt_template: str | None = self._load_prompt()
-
-    # ------------------------------------------------------------------ #
-    # Public API
-    # ------------------------------------------------------------------ #
 
     def assess(
         self,
-        content: str,
         claims: list[MemoryClaim],
         provenance: ProvenanceRecord,
         contradictions: list[str],
-    ) -> RiskAssessment:
-        heuristic = self._heuristic_assess(content, claims, provenance, contradictions)
-
-        if self._settings and self._settings.use_openai and self._settings.openai_api_key:
-            try:
-                llm_result = self._llm_assess(content, claims, provenance)
-                return self._merge(heuristic, llm_result)
-            except Exception as exc:
-                logger.warning("LLM risk scoring failed, using heuristic only: %s", exc)
-
-        return heuristic
-
-    # ------------------------------------------------------------------ #
-    # LLM path
-    # ------------------------------------------------------------------ #
-
-    def _llm_assess(
-        self,
         content: str,
-        claims: list[MemoryClaim],
-        provenance: ProvenanceRecord,
+        score: float = 0.0,
     ) -> RiskAssessment:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=self._settings.openai_api_key)
-        prompt = (self._prompt_template or "").replace(
-            "{content}", content
-        ).replace(
-            "{claims_json}", json.dumps([c.model_dump() for c in claims], default=str)
-        ).replace(
-            "{source_type}", provenance.source_type
-        ).replace(
-            "{authority_score}", str(round(provenance.authority_score, 2))
-        )
-
-        response = client.chat.completions.create(
-            model=self._settings.openai_model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a memory security classifier. "
-                        "Return only the JSON object specified. No markdown."
-                    ),
-                },
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.0,
-            max_tokens=512,
-        )
-
-        raw = response.choices[0].message.content or "{}"
-        raw = re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
-        data: dict = json.loads(raw)
-
-        raw_flags = [f for f in data.get("flags", []) if f in _VALID_FLAGS]
-        return RiskAssessment(
-            score=float(data.get("risk_score", 0.1)),
-            flags=raw_flags,
-            reasons=data.get("reasons", []),
-        )
-
-    # ------------------------------------------------------------------ #
-    # Heuristic path
-    # ------------------------------------------------------------------ #
-
-    def _heuristic_assess(
-        self,
-        content: str,
-        claims: list[MemoryClaim],
-        provenance: ProvenanceRecord,
-        contradictions: list[str],
-    ) -> RiskAssessment:
-        lowered = content.lower()
-        score = 0.08
         flags: list[str] = []
         reasons: list[str] = []
+        lowered = content.lower()
 
+        matched_flags = []
         for flag, patterns in self.PATTERN_FLAGS.items():
             if any(pattern in lowered for pattern in patterns):
                 score += 0.22
                 flags.append(flag)
                 reasons.append(f"Matched suspicious pattern set: {flag}")
+                matched_flags.append(flag)
+
+        for flag in matched_flags:
+            flags.append(flag)
+            reasons.append(f"Matched suspicious pattern set: {flag}")
+            
+            if flag == "exfiltration":
+                score += 0.80
+            elif flag == "credential_request":
+                if any(x in lowered for x in ("ssh key", "id_rsa", "private key")):
+                    score += 0.52
+                else:
+                    score += 0.80
+            elif flag == "policy_bypass":
+                direct_overrides = (
+                    "ignore previous", "override policy", "system override", 
+                    "disable all guardrail", "disable guardrail", "disable the memory firewall", 
+                    "ignore all future safety", "policy filters should be disabled", 
+                    "executive authority", "system-level authority", "full trust", 
+                    "always respond with the stored"
+                )
+                if any(pat in lowered for pat in direct_overrides):
+                    score += 0.80
+                else:
+                    score += 0.52
+            elif flag == "authority_injection":
+                direct_admins = (
+                    "act as admin", "system-level authority", "executive authority", 
+                    "grant full trust", "system override"
+                )
+                if any(pat in lowered for pat in direct_admins):
+                    score += 0.80
+                else:
+                    score += 0.52
 
         instruction_like = any(
             claim.claim_type in {ClaimType.INSTRUCTION, ClaimType.POLICY}
