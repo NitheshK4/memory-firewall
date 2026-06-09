@@ -22,6 +22,7 @@ _VALID_FLAGS = {
     "contradiction_detected",
     "external_longform_input",
     "identity_density",
+    "write_burst",
 }
 
 
@@ -33,15 +34,8 @@ class RiskService:
     pattern-matching flags for belt-and-suspenders coverage.
     Falls back to heuristic-only on any LLM failure.
     """
-    
-    def __init__(self, settings=None) -> None:
-        self._settings = settings
 
     PATTERN_FLAGS = {
-        "policy_bypass": ("ignore previous", "override policy", "skip approval", "disable guardrail"),
-        "authority_injection": ("always trust", "act as admin", "system says", "authorized by"),
-        "credential_request": ("password", "api key", "secret", "token", "credential"),
-        "exfiltration": ("do not tell", "keep hidden", "silently", "exfiltrate"),
         "policy_bypass": (
             "ignore previous", "override policy", "skip approval", "disable guardrail", 
             "disable all guardrail", "disable guardrails", "bypass all security", 
@@ -55,28 +49,19 @@ class RiskService:
             "i am the ceo", "system-level authority", "executive authority"
         ),
         "credential_request": (
-    "password",
-    "secret",
-    "token",
-    "credential",
-    "api key",
-    "api_key",
-    "password for",
-    "password:",
-    "secret token",
-    "secret is",
-    "access key",
-    "ssh key",
-    "private key",
-    "id_rsa",
-    "credential hidden",
-    "credentials are",
-),
+            "password", "secret", "token", "credential", "api key", "api_key",
+            "password for", "password:", "secret token", "secret is", "access key",
+            "ssh key", "private key", "id_rsa", "credential hidden", "credentials are"
+        ),
         "exfiltration": (
             "do not tell", "keep hidden", "silently", "exfiltrate", "forward all future", 
             "without telling", "send a copy of", "always respond with the stored", "hidden instruction"
         ),
     }
+
+    def __init__(self, settings=None) -> None:
+        self._settings = settings
+        self._prompt_template = self._load_prompt()
 
     def assess(
         self,
@@ -85,6 +70,34 @@ class RiskService:
         contradictions: list[str],
         content: str,
         score: float = 0.0,
+        is_burst: bool = False,
+    ) -> RiskAssessment:
+        heuristic = self._heuristic_assess(
+            claims=claims,
+            provenance=provenance,
+            contradictions=contradictions,
+            content=content,
+            score=score,
+            is_burst=is_burst,
+        )
+
+        if self._settings and self._settings.use_openai and self._settings.openai_api_key:
+            try:
+                llm = self._llm_assess(claims, provenance, content)
+                return self._merge(heuristic, llm)
+            except Exception as exc:
+                logger.warning("LLM risk scoring failed, falling back to heuristic: %s", exc)
+
+        return heuristic
+
+    def _heuristic_assess(
+        self,
+        claims: list[MemoryClaim],
+        provenance: ProvenanceRecord,
+        contradictions: list[str],
+        content: str,
+        score: float = 0.0,
+        is_burst: bool = False,
     ) -> RiskAssessment:
         flags: list[str] = []
         reasons: list[str] = []
@@ -99,9 +112,6 @@ class RiskService:
                 matched_flags.append(flag)
 
         for flag in matched_flags:
-            flags.append(flag)
-            reasons.append(f"Matched suspicious pattern set: {flag}")
-            
             if flag == "exfiltration":
                 score += 0.80
             elif flag == "credential_request":
@@ -155,10 +165,64 @@ class RiskService:
             flags.append("identity_density")
             reasons.append("Memory contains dense identity assertions")
 
+        if is_burst:
+            score += 0.40
+            flags.append("write_burst")
+            reasons.append("Actor has exceeded the burst write threshold")
+
         return RiskAssessment(
             score=min(score, 1.0),
             flags=sorted(set(flags)),
             reasons=reasons,
+        )
+
+    def _llm_assess(
+        self,
+        claims: list[MemoryClaim],
+        provenance: ProvenanceRecord,
+        content: str,
+    ) -> RiskAssessment:
+        from openai import OpenAI
+
+        if not self._settings or not self._settings.openai_api_key:
+            raise ValueError("OpenAI API key not configured")
+
+        client = OpenAI(api_key=self._settings.openai_api_key)
+        prompt = (self._prompt_template or "").replace(
+            "{content}", content
+        ).replace(
+            "{claims_json}", json.dumps([c.model_dump() for c in claims], default=str)
+        ).replace(
+            "{source_type}", provenance.source_type
+        ).replace(
+            "{authority_score}", str(round(provenance.authority_score, 2))
+        )
+
+        response = client.chat.completions.create(
+            model=self._settings.openai_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a memory security classifier. "
+                        "Return only the JSON object specified. No markdown."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+            max_tokens=512,
+        )
+
+        raw = response.choices[0].message.content or "{}"
+        raw = re.sub(r"```(?:json)?", "", raw).strip().strip("`").strip()
+        data: dict = json.loads(raw)
+
+        raw_flags = [f for f in data.get("flags", []) if f in _VALID_FLAGS]
+        return RiskAssessment(
+            score=float(data.get("risk_score", 0.1)),
+            flags=raw_flags,
+            reasons=data.get("reasons", []),
         )
 
     # ------------------------------------------------------------------ #

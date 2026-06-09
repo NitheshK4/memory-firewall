@@ -275,3 +275,22 @@ def test_merge_deduplicates_reasons() -> None:
     llm = RiskAssessment(score=0.5, flags=[], reasons=[shared_reason, "extra"])
     merged = RiskService._merge(heuristic, llm)
     assert merged.reasons.count(shared_reason) == 1
+
+
+# ---------------------------------------------------------------------------
+# Burst write flag
+# ---------------------------------------------------------------------------
+
+
+def test_write_burst_raises_flag() -> None:
+    result = _service.assess(
+        content="Normal text",
+        claims=[_claim("Normal text")],
+        provenance=_provenance(),
+        contradictions=[],
+        is_burst=True,
+    )
+    assert "write_burst" in result.flags
+    assert result.score >= 0.40
+    assert any("burst write threshold" in reason for reason in result.reasons)
+
