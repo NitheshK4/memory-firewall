@@ -92,11 +92,16 @@ class WriteFirewall:
         return {"contradictions": contradictions}
 
     def score_risk(self, state: WriteState) -> WriteState:
+        is_burst = False
+        if self.audit_service and state["request"].actor:
+            is_burst = self.audit_service.check_burst_write(state["request"].actor)
+
         assessment = self.risk_service.assess(
             content=state["request"].content,
             claims=state["claims"],
             provenance=state["provenance"],
             contradictions=state.get("contradictions", []),
+            is_burst=is_burst,
         )
         return {"risk": assessment}
 
