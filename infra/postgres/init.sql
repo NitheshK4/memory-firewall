@@ -2,7 +2,7 @@
 -- Run once on a fresh database (idempotent via IF NOT EXISTS).
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgvector";
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- -------------------------------------------------------------------------
 -- memories
