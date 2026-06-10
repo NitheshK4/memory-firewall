@@ -7,6 +7,7 @@ from pathlib import Path
 
 from apps.api.app.config import Settings
 from apps.api.app.models.claim import ClaimType, MemoryClaim
+from packages.shared.utils.sanitise import sanitise_content
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ class ClaimExtractor:
     # ------------------------------------------------------------------ #
 
     def extract(self, content: str) -> list[MemoryClaim]:
+        # Sanitise before any processing so neither the LLM path nor the
+        # heuristic path ever sees raw control characters or oversized input.
+        content = sanitise_content(content)
         if self.settings.use_openai and self.settings.openai_api_key:
             try:
                 return self._extract_llm(content)
