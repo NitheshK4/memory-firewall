@@ -90,6 +90,15 @@ class AuditService:
         event = "retrieval_suppressed" if suppressed else "retrieval_served"
         self._append(memory_id, event=event, actor=actor)
 
+    def log_deletion(self, memory_id: str, actor: str, reason: str = "") -> None:
+        """Record a soft-delete (block) event so the full lifecycle is auditable."""
+        self._append(
+            memory_id,
+            event="memory_deleted",
+            actor=actor,
+            detail=reason,
+        )
+
     # ------------------------------------------------------------------ #
     # Burst detection
     # ------------------------------------------------------------------ #

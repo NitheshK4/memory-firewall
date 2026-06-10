@@ -78,10 +78,10 @@ def delete_memory(
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
     if container.audit_service:
-        container.audit_service.log_verdict(
+        container.audit_service.log_deletion(
             memory_id,
-            action="block",  # type: ignore[arg-type]
             actor=actor,
+            reason="soft-blocked via DELETE endpoint",
         )
     return memory
 
