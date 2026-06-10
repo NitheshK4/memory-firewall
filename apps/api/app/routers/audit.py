@@ -24,3 +24,16 @@ def list_audit(
     # Newest-first
     entries = list(reversed(entries))
     return entries[:limit]
+
+
+@router.get("/actors", summary="Actor write-activity statistics")
+def actor_stats(
+    _auth: None = Depends(require_api_key),
+    container: ServiceContainer = Depends(get_container),
+) -> dict[str, dict]:
+    """Return per-actor write counts, last-write timestamp, and burst flag.
+
+    Useful for building dashboards that surface which actors are producing
+    the most memory-write traffic or are currently bursting.
+    """
+    return container.audit_service.get_actor_stats()

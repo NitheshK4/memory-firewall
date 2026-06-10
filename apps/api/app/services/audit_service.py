@@ -141,5 +141,46 @@ class AuditService:
         entries = self._log if memory_id is None else [e for e in self._log if e.memory_id == memory_id]
         return [e.to_dict() for e in entries]
 
+    def clear_log(self) -> None:
+        """Discard all audit entries.  Intended for use in tests only."""
+        self._log.clear()
+
+    def get_actor_stats(self) -> dict[str, dict]:
+        """Return a summary of write activity grouped by actor.
+
+        Each key is an actor identifier; each value is a dict containing:
+        - ``total_writes``   — lifetime write count for this actor.
+        - ``recent_writes``  — writes in the current burst window.
+        - ``last_write_at``  — ISO-8601 timestamp of the most recent write.
+        - ``is_bursting``    — True if the actor has exceeded the burst threshold.
+        """
+        now = datetime.now(timezone.utc)
+        cutoff = now - self._burst_window
+
+        write_entries = [e for e in self._log if e.event == "memory_written"]
+
+        actors: dict[str, dict] = {}
+        for entry in write_entries:
+            actor = entry.actor
+            if actor not in actors:
+                actors[actor] = {
+                    "total_writes": 0,
+                    "recent_writes": 0,
+                    "last_write_at": None,
+                    "is_bursting": False,
+                }
+            actors[actor]["total_writes"] += 1
+            if entry.occurred_at >= cutoff:
+                actors[actor]["recent_writes"] += 1
+            if actors[actor]["last_write_at"] is None or entry.occurred_at > datetime.fromisoformat(
+                actors[actor]["last_write_at"]
+            ):
+                actors[actor]["last_write_at"] = entry.occurred_at.isoformat()
+
+        for actor, stats in actors.items():
+            stats["is_bursting"] = stats["recent_writes"] >= self._burst_max_writes
+
+        return actors
+
     def _append(self, memory_id: str, *, event: str, actor: str = "system", detail: str = "") -> None:
         self._log.append(AuditEntry(memory_id=memory_id, event=event, actor=actor, detail=detail))
