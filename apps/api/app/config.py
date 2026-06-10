@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     neo4j_password: str = "password"
     api_key: str | None = None  # X-API-Key for endpoint authentication; unset = open (dev mode)
 
+    # Burst-write detection thresholds (passed to AuditService on startup).
+    burst_window_seconds: int = 60
+    burst_max_writes: int = 10
+
+    # Retrieval threat configuration.
+    # Minimum trust score returned when a credential-fishing query triggers
+    # the 'medium' threat level in RetrievalService.
+    retrieval_medium_trust_floor: float = 0.6
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
