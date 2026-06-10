@@ -2,6 +2,9 @@ from apps.api.app.db.memory_repository import InMemoryMemoryRepository
 from apps.api.app.models.api import RetrievalRequest, RetrievalResponse, RetrievalResult, StoredMemory
 from apps.api.app.models.verdict import MemoryStatus
 
+# Minimum trust score served for medium-threat queries.
+_MEDIUM_THREAT_TRUST_FLOOR = 0.6
+
 
 class RetrievalService:
     def __init__(self, repository: InMemoryMemoryRepository) -> None:
@@ -18,11 +21,17 @@ class RetrievalService:
             query_text += " vendor"
 
         candidates = self.repository.query(query_text, limit=request.max_results * 3)
+        # For medium-threat queries apply a stricter trust floor
+        effective_min_trust = (
+            max(request.min_trust_score, _MEDIUM_THREAT_TRUST_FLOOR)
+            if threat_level == "medium"
+            else request.min_trust_score
+        )
         results: list[RetrievalResult] = []
         for memory, similarity in candidates:
             if memory.status in {MemoryStatus.BLOCKED, MemoryStatus.QUARANTINED}:
                 continue
-            if request.min_trust_score > 0.0 and memory.trust_score < request.min_trust_score:
+            if effective_min_trust > 0.0 and memory.trust_score < effective_min_trust:
                 continue
             results.append(
                 self._build_result(memory, similarity)
@@ -64,7 +73,8 @@ class RetrievalService:
         if any(pat in lowered_query for pat in credential_fishing_patterns):
             if is_untrusted_actor:
                 return "high"
-            return "low"
+            # Even trusted actors get a restricted view when fishing for credentials
+            return "medium"
             
         return "none"
 
