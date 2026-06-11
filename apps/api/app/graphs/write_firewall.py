@@ -106,7 +106,7 @@ class WriteFirewall:
         return {"risk": assessment}
 
     def decide_policy(self, state: WriteState) -> WriteState:
-        return {"verdict": self.policy_engine.decide(state["risk"], state["provenance"])}
+        return {"verdict": self.policy_engine.decide(state["risk"], state["provenance"], state["request"].content)}
 
     def persist(self, state: WriteState) -> WriteState:
         status = {
