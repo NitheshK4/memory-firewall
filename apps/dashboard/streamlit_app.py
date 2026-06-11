@@ -33,7 +33,8 @@ st.title("Memory Firewall Console")
 st.caption("Review quarantined memories and test trust-aware retrieval.")
 
 health = get_json("/health")
-all_memories = get_json("/api/v1/memories")
+all_memories_data = get_json("/api/v1/memories")
+all_memories = all_memories_data.get("items", [])
 status_breakdown = health.get("status_breakdown", {})
 
 metric_columns = st.columns(4)
