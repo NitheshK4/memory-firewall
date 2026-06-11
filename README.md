@@ -1,5 +1,8 @@
 # Memory Firewall
 
+> [!NOTE]
+> **Live Demo**: [https://1b50a584a1351d.lhr.life](https://1b50a584a1351d.lhr.life) (temporary tunnel link)
+
 Memory Firewall is a runnable MVP for defending long-term memory in AI agents.
 It intercepts memory writes and memory retrievals, scores them for risk, records
 provenance, checks contradictions, and quarantines suspicious content before it
