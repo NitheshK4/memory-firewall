@@ -29,6 +29,7 @@ memory-firewall/
 │   │   │   │   ├── retrieval.py
 │   │   │   │   ├── policies.py
 │   │   │   │   ├── review.py
+│   │   │   │   ├── audit.py
 │   │   │   │   └── health.py
 │   │   │   ├── services/
 │   │   │   │   ├── ingest_service.py
@@ -44,12 +45,14 @@ memory-firewall/
 │   │   │   │   ├── write_firewall.py
 │   │   │   │   └── read_firewall.py
 │   │   │   ├── models/
+│   │   │   │   ├── api.py
 │   │   │   │   ├── memory_claim.py
 │   │   │   │   ├── provenance.py
 │   │   │   │   ├── verdict.py
 │   │   │   │   ├── policy.py
 │   │   │   │   └── retrieval_context.py
 │   │   │   ├── db/
+│   │   │   │   ├── memory_repository.py
 │   │   │   │   ├── postgres.py
 │   │   │   │   ├── neo4j.py
 │   │   │   │   └── vector.py
@@ -64,7 +67,11 @@ memory-firewall/
 │   │   │   ├── test_write_firewall.py
 │   │   │   ├── test_read_firewall.py
 │   │   │   ├── test_contradictions.py
-│   │   │   └── test_policy_engine.py
+│   │   │   ├── test_policy_engine.py
+│   │   │   ├── test_risk_service.py
+│   │   │   ├── test_audit_burst.py
+│   │   │   ├── test_retrieval_service.py
+│   │   │   └── test_sanitise.py
 │   │   └── Dockerfile
 │   └── dashboard/
 │       ├── streamlit_app.py
@@ -82,7 +89,8 @@ memory-firewall/
 │   │   └── utils/
 │   │       ├── hashing.py
 │   │       ├── timestamps.py
-│   │       └── ids.py
+│   │       ├── ids.py
+│   │       └── sanitise.py
 │   └── connectors/
 │       ├── email_connector.py
 │       ├── slack_connector.py
@@ -129,8 +137,6 @@ memory-firewall/
 ```
 
 ## Architecture
-
-
 
 ```mermaid
 flowchart TD
@@ -227,9 +233,13 @@ flowchart TD
 
 - `POST /api/v1/memories`
 - `GET /api/v1/memories`
+- `GET /api/v1/memories/{id}`
+- `DELETE /api/v1/memories/{id}`
 - `POST /api/v1/retrieval/query`
 - `GET /api/v1/review/quarantine`
 - `POST /api/v1/review/{memory_id}/decision`
+- `GET /api/v1/audit`
+- `GET /api/v1/audit/actors`
 - `GET /health`
 
 ## Notes
