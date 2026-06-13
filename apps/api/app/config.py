@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     use_openai: bool = False
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"
+    use_local_semantic: bool = True
+    local_embedding_model: str = "all-MiniLM-L6-v2"
     api_base_url: str = "http://localhost:8000"
     database_url: str = "postgresql+psycopg://postgres:postgres@postgres:5432/memory_firewall"
     neo4j_uri: str = "bolt://neo4j:7687"

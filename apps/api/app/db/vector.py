@@ -132,18 +132,92 @@ class InMemoryVectorStore:
 
 
 # ---------------------------------------------------------------------------
+# Local Semantic Embedding Store
+# ---------------------------------------------------------------------------
+
+class LocalSemanticEmbeddingStore:
+    """Semantic vector store using a local SentenceTransformer model."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise ImportError(
+                "sentence-transformers package is not installed. "
+                "Run `pip install sentence-transformers` to use LocalSemanticEmbeddingStore."
+            ) from exc
+        logger.info("Loading local SentenceTransformer model '%s'...", model_name)
+        self._model = SentenceTransformer(model_name)
+        self._docs: dict[str, VectorDocument] = {}
+
+    def add(self, doc: VectorDocument) -> None:
+        if not doc.embedding:
+            doc.embedding = self._embed(doc.text)
+        self._docs[doc.doc_id] = doc
+
+    def delete(self, doc_id: str) -> None:
+        self._docs.pop(doc_id, None)
+
+    def similarity_search(self, query: str, top_k: int = 5) -> list[tuple[VectorDocument, float]]:
+        if not self._docs:
+            return []
+        query_vec = self._embed(query)
+        scored = [
+            (doc, self._cosine(query_vec, doc.embedding))
+            for doc in self._docs.values()
+            if doc.embedding
+        ]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:top_k]
+
+    def _embed(self, text: str) -> list[float]:
+        try:
+            emb = self._model.encode(text)
+            if hasattr(emb, "tolist"):
+                return emb.tolist()
+            return list(emb)
+        except Exception as exc:
+            logger.warning("Local SentenceTransformer embedding failed: %s", exc)
+            return []
+
+    @staticmethod
+    def _cosine(a: list[float], b: list[float]) -> float:
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = math.sqrt(sum(x * x for x in a))
+        norm_b = math.sqrt(sum(x * x for x in b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
+
+
+# ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 
-def build_vector_store(settings=None) -> OpenAIEmbeddingStore | InMemoryVectorStore:
+def build_vector_store(settings=None) -> OpenAIEmbeddingStore | LocalSemanticEmbeddingStore | InMemoryVectorStore:
     """Return the best available vector store given current settings."""
     if settings and getattr(settings, "use_openai", False) and getattr(settings, "openai_api_key", None):
         logger.info("Using OpenAI text-embedding-3-small vector store")
         return OpenAIEmbeddingStore(api_key=settings.openai_api_key)
-    logger.info("Using in-memory keyword vector store (set USE_OPENAI=true for semantic search)")
+
+    if settings and getattr(settings, "use_local_semantic", True):
+        model_name = getattr(settings, "local_embedding_model", "all-MiniLM-L6-v2")
+        try:
+            from sentence_transformers import SentenceTransformer
+            logger.info("Using local SentenceTransformer vector store (model: %s)", model_name)
+            return LocalSemanticEmbeddingStore(model_name=model_name)
+        except ImportError:
+            logger.warning(
+                "sentence-transformers not installed; falling back to "
+                "in-memory keyword vector store"
+            )
+
+    logger.info("Using in-memory keyword vector store (set USE_LOCAL_SEMANTIC=true or USE_OPENAI=true for semantic search)")
     return InMemoryVectorStore()
 
 
 # Default singleton (keyword mode) — replaced by deps.py when settings are available
-vector_store: InMemoryVectorStore | OpenAIEmbeddingStore = InMemoryVectorStore()
+vector_store: InMemoryVectorStore | OpenAIEmbeddingStore | LocalSemanticEmbeddingStore = InMemoryVectorStore()
 
