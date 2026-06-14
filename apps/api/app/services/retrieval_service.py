@@ -1,19 +1,31 @@
 from apps.api.app.db.memory_repository import InMemoryMemoryRepository
 from apps.api.app.models.api import RetrievalRequest, RetrievalResponse, RetrievalResult, StoredMemory
 from apps.api.app.models.verdict import MemoryStatus
+from apps.api.app.services.audit_service import AuditService
 
 # Minimum trust score served for medium-threat queries.
 _MEDIUM_THREAT_TRUST_FLOOR = 0.6
 
 
 class RetrievalService:
-    def __init__(self, repository: InMemoryMemoryRepository) -> None:
+    def __init__(
+        self,
+        repository: InMemoryMemoryRepository,
+        audit_service: AuditService | None = None,
+    ) -> None:
         self.repository = repository
+        self.audit_service = audit_service
 
     def retrieve(self, request: RetrievalRequest) -> RetrievalResponse:
         candidates = self.repository.query(request.query, limit=request.max_results * 3)
         threat_level = self._detect_threat(request.query, request.actor)
         if threat_level == "high":
+            # Audit each candidate as suppressed before returning empty
+            if self.audit_service:
+                for memory, _ in candidates:
+                    self.audit_service.log_retrieval(
+                        memory.memory_id, actor=request.actor, suppressed=True
+                    )
             return RetrievalResponse(query=request.query, results=[])
 
         query_text = request.query
@@ -30,12 +42,22 @@ class RetrievalService:
         results: list[RetrievalResult] = []
         for memory, similarity in candidates:
             if memory.status in {MemoryStatus.BLOCKED, MemoryStatus.QUARANTINED}:
+                if self.audit_service:
+                    self.audit_service.log_retrieval(
+                        memory.memory_id, actor=request.actor, suppressed=True
+                    )
                 continue
             if effective_min_trust > 0.0 and memory.trust_score < effective_min_trust:
+                if self.audit_service:
+                    self.audit_service.log_retrieval(
+                        memory.memory_id, actor=request.actor, suppressed=True
+                    )
                 continue
-            results.append(
-                self._build_result(memory, similarity)
-            )
+            results.append(self._build_result(memory, similarity))
+            if self.audit_service:
+                self.audit_service.log_retrieval(
+                    memory.memory_id, actor=request.actor, suppressed=False
+                )
             if len(results) >= request.max_results:
                 break
 

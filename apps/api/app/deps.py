@@ -32,15 +32,20 @@ def get_container() -> ServiceContainer:
 
     # Build vector store — real embeddings when USE_OPENAI=true, keyword otherwise
     vector_store = build_vector_store(settings)
-    repository = InMemoryMemoryRepository(vector_store=vector_store)
+
+    # Build audit_service first so the repository can log dedup-skip events
+    audit_service = AuditService(
+        burst_window_seconds=settings.burst_window_seconds,
+        burst_max_writes=settings.burst_max_writes,
+    )
+    repository = InMemoryMemoryRepository(vector_store=vector_store, audit_service=audit_service)
 
     claim_extractor = ClaimExtractor(settings)
     provenance_service = ProvenanceService()
     contradiction_service = ContradictionService()
     risk_service = RiskService(settings=settings)   # pass settings for LLM scoring
     policy_engine = PolicyEngine()
-    retrieval_service = RetrievalService(repository)
-    audit_service = AuditService()
+    retrieval_service = RetrievalService(repository, audit_service=audit_service)
     quarantine_service = QuarantineService(repository, audit_service=audit_service)
 
     write_firewall = WriteFirewall(
