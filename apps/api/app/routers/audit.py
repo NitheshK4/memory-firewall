@@ -37,3 +37,27 @@ def actor_stats(
     the most memory-write traffic or are currently bursting.
     """
     return container.audit_service.get_actor_stats()
+
+
+@router.get("/stats", summary="Aggregate event-type counts from the audit log")
+def event_stats(
+    _auth: None = Depends(require_api_key),
+    container: ServiceContainer = Depends(get_container),
+) -> dict[str, int]:
+    """Return a count of each distinct event type across the entire audit log.
+
+    Useful for building dashboards that surface firewall throughput, verdict
+    distribution, retrieval activity, and dedup suppression rates at a glance.
+
+    Example response::
+
+        {
+            "memory_written": 42,
+            "verdict:allow": 30,
+            "verdict:quarantine": 8,
+            "retrieval_served": 120,
+            "retrieval_suppressed": 15,
+            "dedup_skipped": 5
+        }
+    """
+    return container.audit_service.get_event_stats()
