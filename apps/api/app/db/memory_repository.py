@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from apps.api.app.db.vector import InMemoryVectorStore, VectorDocument
 from apps.api.app.models.api import ReviewAction, ReviewDecision, StoredMemory
 from apps.api.app.models.verdict import MemoryStatus
+from packages.shared.utils.hashing import content_fingerprint
 
 
 class InMemoryMemoryRepository:
@@ -14,15 +15,40 @@ class InMemoryMemoryRepository:
     Pass a ``vector_store`` built by ``build_vector_store(settings)`` to
     enable real ``text-embedding-3-small`` similarity search.  Defaults to
     the keyword-overlap fallback.
+
+    Duplicate writes (same normalised content fingerprint) are suppressed:
+    :meth:`save` returns the existing memory instead of creating a duplicate.
+    An optional ``audit_service`` is notified via ``log_dedup_skip`` when
+    a write is suppressed.
     """
 
-    def __init__(self, vector_store: InMemoryVectorStore | None = None) -> None:
+    def __init__(
+        self,
+        vector_store: InMemoryVectorStore | None = None,
+        audit_service=None,
+    ) -> None:
         self._memories: dict[str, StoredMemory] = {}
         self._vector_store = vector_store or InMemoryVectorStore()
+        self._fingerprints: dict[str, str] = {}  # fingerprint → memory_id
+        self._audit_service = audit_service
 
     def save(self, memory: StoredMemory) -> StoredMemory:
+        fp = content_fingerprint(memory.raw_content)
+        existing_id = self._fingerprints.get(fp)
+        if existing_id and existing_id in self._memories:
+            # Duplicate content — return the existing record without a new write
+            existing = self._memories[existing_id]
+            if self._audit_service:
+                self._audit_service.log_dedup_skip(
+                    memory_id=existing_id,
+                    actor=memory.provenance.actor,
+                    fingerprint=fp,
+                )
+            return existing.model_copy(deep=True)
+
         stored = memory.model_copy(deep=True)
         self._memories[stored.memory_id] = stored
+        self._fingerprints[fp] = stored.memory_id
         # Index in vector store (skip blocked memories)
         if stored.status != MemoryStatus.BLOCKED:
             self._vector_store.add(
