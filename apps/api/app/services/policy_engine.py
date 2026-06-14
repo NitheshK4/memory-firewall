@@ -41,6 +41,12 @@ class PolicyEngine:
             # Untrusted sources (email, web, slack, etc.)
             if "exfiltration" in assessment.flags:
                 action = VerdictAction.BLOCK
+            elif "url_injection" in assessment.flags:
+                # Script/data-URI injection from untrusted source is always blocked
+                action = VerdictAction.BLOCK
+            elif "obfuscation" in assessment.flags and assessment.score >= 0.58:
+                # Obfuscated content with elevated risk score is blocked
+                action = VerdictAction.BLOCK
             elif "credential_request" in assessment.flags:
                 if any(x in lowered for x in ("ssh key", "id_rsa", "private key")):
                     action = VerdictAction.QUARANTINE
