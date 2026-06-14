@@ -39,6 +39,39 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `burst_window_seconds`, `burst_max_writes`, and `retrieval_medium_trust_floor`
   settings fields; all three are configurable via environment variables and
   documented in `.env.example`.
+- **Retrieval auditing** — `RetrievalService` now accepts an `AuditService` and
+  calls `log_retrieval(memory_id, actor, suppressed=...)` for every candidate
+  evaluated during a retrieval query (served or suppressed); previously no
+  retrieval events were recorded in the audit log.
+- **`AuditService.get_event_stats()`** — returns `dict[str, int]` of event-type
+  counts across the entire audit log; useful for dashboard throughput views.
+- **`GET /api/v1/audit/stats`** — exposes `get_event_stats()` over HTTP.
+- **`obfuscation` risk flag** — `RiskService` now detects base64 blobs
+  (`[A-Za-z0-9+/]{20,}`) and long hex literals (`0x[0-9a-fA-F]{8,}`) in
+  memory content and raises an `obfuscation` flag (+0.30 risk score).
+- **`url_injection` risk flag** — `RiskService` detects `javascript:`,
+  `data:text/html`, and `vbscript:` URI schemes (+0.45 risk score).
+- **`PolicyEngine` hard-block for `url_injection`** — untrusted sources with
+  a `url_injection` flag always receive `BLOCK`; `obfuscation` receives `BLOCK`
+  when the combined risk score ≥ 0.58.
+- **`RiskAssessment.contradiction_count`** — integer field populated by
+  `RiskService` so callers can read the raw contradiction count without
+  parsing reason strings.
+- **`tags` field** on `MemoryWriteRequest` and `StoredMemory` — optional list
+  of string labels; propagated through the write firewall graph.
+- **`tags` query filter** on `GET /api/v1/memories` — `?tags=a&tags=b` returns
+  only memories whose tag set is a superset of the requested tags.
+- **`content_fingerprint()`** already present in `packages/shared/utils/hashing.py`;
+  now actively used by `InMemoryMemoryRepository`.
+- **Dedup guard** in `InMemoryMemoryRepository.save()` — identical content
+  (normalised SHA-256 fingerprint) is detected on write; the existing record is
+  returned and no duplicate is stored.
+- **`AuditService.log_dedup_skip()`** — records a `dedup_skipped` audit event
+  when a write is suppressed by the dedup guard.
+- **`GET /api/v1/health/detailed`** — returns a per-component health report with
+  `repository`, `audit_log`, and `vector_store` sub-objects including live
+  memory counts, entry counts, and event distribution.
+- **25 new unit tests** in `test_contributions.py` covering all of the above.
 
 ### Changed
 - `GET /api/v1/memories` response shape is now a `MemoryListResponse` object
@@ -50,6 +83,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   to produce a correctly typed `memory_deleted` audit event.
 - Credential-fishing retrieval queries from non-untrusted actors now return
   `"medium"` threat level instead of `"low"`, triggering the trust-floor filter.
+- `AuditService` is now constructed before `InMemoryMemoryRepository` in
+  `get_container()` so dedup-skip events are logged from the start.
+- `RetrievalService.__init__` now accepts an optional `audit_service` argument.
 
 ---
 
