@@ -99,6 +99,21 @@ class AuditService:
             detail=reason,
         )
 
+    def log_dedup_skip(self, memory_id: str, actor: str, fingerprint: str) -> None:
+        """Record that an incoming write was suppressed because its content
+        fingerprint matched an existing memory.
+
+        :param memory_id: ID of the *existing* memory whose content matched.
+        :param actor: Actor who submitted the duplicate write.
+        :param fingerprint: SHA-256 content fingerprint that caused the skip.
+        """
+        self._append(
+            memory_id,
+            event="dedup_skipped",
+            actor=actor,
+            detail=f"fingerprint={fingerprint[:16]}…",
+        )
+
     # ------------------------------------------------------------------ #
     # Burst detection
     # ------------------------------------------------------------------ #
@@ -140,6 +155,27 @@ class AuditService:
     def get_log(self, memory_id: str | None = None) -> list[dict]:
         entries = self._log if memory_id is None else [e for e in self._log if e.memory_id == memory_id]
         return [e.to_dict() for e in entries]
+
+    def get_event_stats(self) -> dict[str, int]:
+        """Return a count of each distinct event type across the entire audit log.
+
+        Example return value::
+
+            {
+                "memory_written": 42,
+                "verdict:allow": 30,
+                "verdict:quarantine": 8,
+                "quarantined": 8,
+                "retrieval_served": 120,
+                "dedup_skipped": 5,
+            }
+
+        Useful for building dashboards that show firewall activity at a glance.
+        """
+        stats: dict[str, int] = {}
+        for entry in self._log:
+            stats[entry.event] = stats.get(entry.event, 0) + 1
+        return stats
 
     def clear_log(self) -> None:
         """Discard all audit entries.  Intended for use in tests only."""
