@@ -21,6 +21,10 @@ class RiskAssessment(BaseModel):
     score: float = Field(ge=0.0, le=1.0)
     flags: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
+    contradiction_count: int = Field(
+        default=0,
+        description="Number of existing memories that contradict this write.",
+    )
 
 
 class MemoryVerdict(BaseModel):
