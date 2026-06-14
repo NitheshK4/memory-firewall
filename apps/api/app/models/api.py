@@ -15,6 +15,10 @@ class MemoryWriteRequest(BaseModel):
     source_id: str | None = None
     actor: str = Field(default="unknown")
     metadata: dict[str, str] = Field(default_factory=dict)
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Optional labels attached to this memory for filtering and categorisation.",
+    )
 
 
 class StoredMemory(BaseModel):
@@ -26,6 +30,10 @@ class StoredMemory(BaseModel):
     trust_score: float = Field(ge=0.0, le=1.0, default=0.5)
     contradictions: list[str] = Field(default_factory=list)
     flags: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Optional labels for filtering and categorisation.",
+    )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

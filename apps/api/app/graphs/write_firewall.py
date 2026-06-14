@@ -124,6 +124,7 @@ class WriteFirewall:
             trust_score=state["verdict"].trust_score,
             contradictions=state.get("contradictions", []),
             flags=state["risk"].flags,
+            tags=state["request"].tags,
         )
         saved = self.repository.save(stored)
 
