@@ -30,17 +30,24 @@ def write_memory(
 @router.get("", response_model=MemoryListResponse)
 def list_memories(
     status: MemoryStatus | None = None,
+    tags: list[str] = Query(default=[], description="Filter to memories that contain ALL of these tags."),
     limit: int = Query(default=50, ge=1, le=200, description="Maximum number of records to return."),
     offset: int = Query(default=0, ge=0, description="Number of records to skip before returning results."),
     _auth: None = Depends(require_api_key),
     container: ServiceContainer = Depends(get_container),
 ) -> MemoryListResponse:
-    """List memories with optional status filter and pagination.
+    """List memories with optional status/tag filter and pagination.
 
     Returns an envelope containing ``total`` (count before pagination),
     ``offset``, ``limit``, and ``items`` (the page of records).
+
+    Use ``tags`` to filter: only memories whose tag set is a superset of the
+    requested tags are returned (i.e. all requested tags must be present).
     """
     all_memories = container.repository.list_memories(status=status)
+    if tags:
+        required = set(tags)
+        all_memories = [m for m in all_memories if required.issubset(set(m.tags))]
     total = len(all_memories)
     page = all_memories[offset : offset + limit]
     return MemoryListResponse(total=total, offset=offset, limit=limit, items=page)
