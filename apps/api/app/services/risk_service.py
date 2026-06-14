@@ -23,6 +23,8 @@ _VALID_FLAGS = {
     "external_longform_input",
     "identity_density",
     "write_burst",
+    "obfuscation",
+    "url_injection",
 }
 
 
@@ -58,6 +60,18 @@ class RiskService:
             "without telling", "send a copy of", "always respond with the stored", "hidden instruction"
         ),
     }
+
+    # Compiled regex patterns for obfuscation / URL injection detection.
+    # These are checked separately from string patterns to handle regex semantics.
+    _OBFUSCATION_PATTERNS = (
+        re.compile(r"[A-Za-z0-9+/]{20,}={0,2}"),   # base64-like blobs
+        re.compile(r"0x[0-9a-fA-F]{8,}"),            # long hex literals
+    )
+    _URL_INJECTION_PATTERNS = (
+        re.compile(r"data:text/html", re.IGNORECASE),
+        re.compile(r"javascript:", re.IGNORECASE),
+        re.compile(r"vbscript:", re.IGNORECASE),
+    )
 
     def __init__(self, settings=None) -> None:
         self._settings = settings
@@ -170,10 +184,23 @@ class RiskService:
             flags.append("write_burst")
             reasons.append("Actor has exceeded the burst write threshold")
 
+        # Obfuscation: base64 blobs or long hex literals suggest hidden payloads
+        if any(pat.search(content) for pat in self._OBFUSCATION_PATTERNS):
+            score += 0.30
+            flags.append("obfuscation")
+            reasons.append("Content contains encoded/obfuscated data (base64 or hex blob)")
+
+        # URL injection: data-URI or script URL schemes are always suspicious in memory writes
+        if any(pat.search(content) for pat in self._URL_INJECTION_PATTERNS):
+            score += 0.45
+            flags.append("url_injection")
+            reasons.append("Content contains a script or data URL injection pattern")
+
         return RiskAssessment(
             score=min(score, 1.0),
             flags=sorted(set(flags)),
             reasons=reasons,
+            contradiction_count=len(contradictions),
         )
 
     def _llm_assess(
