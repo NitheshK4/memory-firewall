@@ -69,3 +69,43 @@ def sanitise_content(
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = truncate(text, max_length)
     return text
+
+
+# Regexes for PII detection
+_EMAIL_RE = re.compile(r"\b[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+\b")
+_PHONE_RE = re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+_SECRET_PREFIX_RE = re.compile(r"\b(?:sk|key|token|pat|api|sbip|secret)-[a-zA-Z0-9_\-]{16,}\b", re.IGNORECASE)
+_SECRET_ASSIGN_RE = re.compile(r"(\b(?:api_key|password|secret|token|private_key)\b\s*[:=]\s*[\"']?)([a-zA-Z0-9_\-]{16,})([\"']?)", re.IGNORECASE)
+
+
+def redact_pii(text: str) -> tuple[str, list[str]]:
+    """Redact PII (email, phone, API keys/secrets) from text.
+
+    Returns the redacted text and a list of redacted types (e.g., ['email', 'phone', 'secret']).
+    """
+    redacted_types = []
+
+    # 1. Emails
+    if _EMAIL_RE.search(text):
+        text = _EMAIL_RE.sub("[EMAIL_REDACTED]", text)
+        redacted_types.append("email")
+
+    # 2. Phone Numbers
+    if _PHONE_RE.search(text):
+        text = _PHONE_RE.sub("[PHONE_REDACTED]", text)
+        redacted_types.append("phone")
+
+    # 3. Secrets / API Keys (prefix style)
+    if _SECRET_PREFIX_RE.search(text):
+        text = _SECRET_PREFIX_RE.sub("[SECRET_REDACTED]", text)
+        if "secret" not in redacted_types:
+            redacted_types.append("secret")
+
+    # 4. Secrets / API Keys (assignment style)
+    if _SECRET_ASSIGN_RE.search(text):
+        text = _SECRET_ASSIGN_RE.sub(r"\1[SECRET_REDACTED]\3", text)
+        if "secret" not in redacted_types:
+            redacted_types.append("secret")
+
+    return text, redacted_types
+
