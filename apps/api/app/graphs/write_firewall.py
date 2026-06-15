@@ -4,6 +4,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from apps.api.app.config import Settings, get_settings
 from apps.api.app.db.memory_repository import InMemoryMemoryRepository
 from apps.api.app.models.api import MemoryWriteRequest, MemoryWriteResponse, StoredMemory
 from apps.api.app.models.claim import MemoryClaim
@@ -15,6 +16,7 @@ from apps.api.app.services.contradiction_service import ContradictionService
 from apps.api.app.services.policy_engine import PolicyEngine
 from apps.api.app.services.provenance_service import ProvenanceService
 from apps.api.app.services.risk_service import RiskService
+from packages.shared.utils.sanitise import redact_pii
 
 
 class WriteState(TypedDict, total=False):
@@ -26,6 +28,7 @@ class WriteState(TypedDict, total=False):
     risk: RiskAssessment
     verdict: MemoryVerdict
     stored_memory: StoredMemory
+    redacted_types: list[str]
 
 
 class WriteFirewall:
@@ -38,6 +41,7 @@ class WriteFirewall:
         risk_service: RiskService,
         policy_engine: PolicyEngine,
         audit_service: AuditService | None = None,
+        settings: Settings | None = None,
     ) -> None:
         self.repository = repository
         self.claim_extractor = claim_extractor
@@ -46,6 +50,7 @@ class WriteFirewall:
         self.risk_service = risk_service
         self.policy_engine = policy_engine
         self.audit_service = audit_service
+        self.settings = settings or get_settings()
         self.graph = self._compile()
 
     def run(self, request: MemoryWriteRequest) -> MemoryWriteResponse:
@@ -57,6 +62,7 @@ class WriteFirewall:
 
     def _compile(self):
         graph = StateGraph(WriteState)
+        graph.add_node("redact_pii", self.redact_pii_node)
         graph.add_node("attach_provenance", self.attach_provenance)
         graph.add_node("extract_claims", self.extract_claims)
         graph.add_node("search_similar", self.search_similar)
@@ -64,7 +70,9 @@ class WriteFirewall:
         graph.add_node("score_risk", self.score_risk)
         graph.add_node("decide_policy", self.decide_policy)
         graph.add_node("persist", self.persist)
-        graph.add_edge(START, "attach_provenance")
+        
+        graph.add_edge(START, "redact_pii")
+        graph.add_edge("redact_pii", "attach_provenance")
         graph.add_edge("attach_provenance", "extract_claims")
         graph.add_edge("extract_claims", "search_similar")
         graph.add_edge("search_similar", "check_contradictions")
@@ -73,6 +81,15 @@ class WriteFirewall:
         graph.add_edge("decide_policy", "persist")
         graph.add_edge("persist", END)
         return graph.compile()
+
+    def redact_pii_node(self, state: WriteState) -> WriteState:
+        request = state["request"]
+        if self.settings.enable_pii_redaction:
+            redacted_content, redacted_types = redact_pii(request.content)
+            if redacted_types:
+                new_request = request.model_copy(update={"content": redacted_content})
+                return {"request": new_request, "redacted_types": redacted_types}
+        return {"request": request, "redacted_types": []}
 
     def attach_provenance(self, state: WriteState) -> WriteState:
         return {"provenance": self.provenance_service.build(state["request"])}
@@ -134,6 +151,14 @@ class WriteFirewall:
                 saved.memory_id,
                 action=state["verdict"].action,
             )
+            redacted_types = state.get("redacted_types", [])
+            if redacted_types:
+                self.audit_service.log_redaction(
+                    saved.memory_id,
+                    actor=saved.provenance.actor,
+                    redacted_types=redacted_types,
+                )
 
         return {"stored_memory": saved}
+
 

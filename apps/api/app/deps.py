@@ -56,6 +56,7 @@ def get_container() -> ServiceContainer:
         risk_service=risk_service,
         policy_engine=policy_engine,
         audit_service=audit_service,
+        settings=settings,
     )
     read_firewall = ReadFirewall(retrieval_service)
     return ServiceContainer(

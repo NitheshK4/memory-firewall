@@ -114,6 +114,21 @@ class AuditService:
             detail=f"fingerprint={fingerprint[:16]}…",
         )
 
+    def log_redaction(self, memory_id: str, actor: str, redacted_types: list[str]) -> None:
+        """Record a PII redaction event for a memory write.
+
+        :param memory_id: ID of the stored memory where PII was redacted.
+        :param actor: Actor who submitted the content containing PII.
+        :param redacted_types: List of PII categories that were redacted (e.g. ['email', 'phone']).
+        """
+        self._append(
+            memory_id,
+            event="pii_redacted",
+            actor=actor,
+            detail=f"types={','.join(redacted_types)}",
+        )
+
+
     # ------------------------------------------------------------------ #
     # Burst detection
     # ------------------------------------------------------------------ #
