@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # the 'medium' threat level in RetrievalService.
     retrieval_medium_trust_floor: float = 0.6
 
+    # PII / Sensitive Data Redaction configuration
+    enable_pii_redaction: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
