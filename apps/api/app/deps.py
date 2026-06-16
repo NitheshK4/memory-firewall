@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from functools import lru_cache
+
+from fastapi import Header
 
 from apps.api.app.config import Settings, get_settings
 from apps.api.app.db.memory_repository import InMemoryMemoryRepository
@@ -26,46 +27,56 @@ class ServiceContainer:
     audit_service: AuditService
 
 
-@lru_cache
-def get_container() -> ServiceContainer:
-    settings = get_settings()
+# Global registry mapping session IDs to their own ServiceContainer instances
+_containers: dict[str, ServiceContainer] = {}
 
-    # Build vector store — real embeddings when USE_OPENAI=true, keyword otherwise
-    vector_store = build_vector_store(settings)
 
-    # Build audit_service first so the repository can log dedup-skip events
-    audit_service = AuditService(
-        burst_window_seconds=settings.burst_window_seconds,
-        burst_max_writes=settings.burst_max_writes,
-    )
-    repository = InMemoryMemoryRepository(vector_store=vector_store, audit_service=audit_service)
+def get_container(x_session_id: str | None = Header(None)) -> ServiceContainer:
+    session_id = x_session_id or "global"
 
-    claim_extractor = ClaimExtractor(settings)
-    provenance_service = ProvenanceService()
-    contradiction_service = ContradictionService()
-    risk_service = RiskService(settings=settings)   # pass settings for LLM scoring
-    policy_engine = PolicyEngine()
-    retrieval_service = RetrievalService(repository, audit_service=audit_service)
-    quarantine_service = QuarantineService(repository, audit_service=audit_service)
+    if session_id not in _containers:
+        settings = get_settings()
 
-    write_firewall = WriteFirewall(
-        repository=repository,
-        claim_extractor=claim_extractor,
-        provenance_service=provenance_service,
-        contradiction_service=contradiction_service,
-        risk_service=risk_service,
-        policy_engine=policy_engine,
-        audit_service=audit_service,
-        settings=settings,
-    )
-    read_firewall = ReadFirewall(retrieval_service)
-    return ServiceContainer(
-        settings=settings,
-        repository=repository,
-        write_firewall=write_firewall,
-        read_firewall=read_firewall,
-        quarantine_service=quarantine_service,
-        audit_service=audit_service,
-    )
+        # Build vector store — real embeddings when USE_OPENAI=true, keyword otherwise
+        vector_store = build_vector_store(settings)
+
+        # Build audit_service first so the repository can log dedup-skip events
+        audit_service = AuditService(
+            burst_window_seconds=settings.burst_window_seconds,
+            burst_max_writes=settings.burst_max_writes,
+        )
+        repository = InMemoryMemoryRepository(vector_store=vector_store, audit_service=audit_service)
+
+        claim_extractor = ClaimExtractor(settings)
+        provenance_service = ProvenanceService()
+        contradiction_service = ContradictionService()
+        risk_service = RiskService(settings=settings)   # pass settings for LLM scoring
+        policy_engine = PolicyEngine()
+        retrieval_service = RetrievalService(repository, audit_service=audit_service)
+        quarantine_service = QuarantineService(repository, audit_service=audit_service)
+
+        write_firewall = WriteFirewall(
+            repository=repository,
+            claim_extractor=claim_extractor,
+            provenance_service=provenance_service,
+            contradiction_service=contradiction_service,
+            risk_service=risk_service,
+            policy_engine=policy_engine,
+            audit_service=audit_service,
+            settings=settings,
+        )
+        read_firewall = ReadFirewall(retrieval_service)
+        
+        _containers[session_id] = ServiceContainer(
+            settings=settings,
+            repository=repository,
+            write_firewall=write_firewall,
+            read_firewall=read_firewall,
+            quarantine_service=quarantine_service,
+            audit_service=audit_service,
+        )
+
+    return _containers[session_id]
+
 
 

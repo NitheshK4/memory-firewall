@@ -11,9 +11,13 @@ API_KEY = os.getenv("API_KEY", "")
 
 
 def get_headers() -> dict[str, str]:
+    import uuid
     headers = {}
     if API_KEY:
         headers["X-API-Key"] = API_KEY
+    if "session_id" not in st.session_state:
+        st.session_state["session_id"] = str(uuid.uuid4())
+    headers["X-Session-ID"] = st.session_state["session_id"]
     return headers
 
 
