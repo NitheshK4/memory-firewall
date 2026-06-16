@@ -58,3 +58,17 @@ else:
                     )
                     st.success("Rejected" if r.ok else f"Error: {r.text}")
                     st.rerun()
+
+repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+with st.sidebar:
+    st.markdown("---")
+    st.subheader("⚙️ System Status")
+    st.success("FastAPI Backend: **Online**")
+    
+    log_path = os.path.join(repo_root, "fastapi_server.log")
+    if os.path.exists(log_path):
+        with st.expander("📝 View Backend Logs", expanded=False):
+            with open(log_path, "r", encoding="utf-8") as f:
+                st.code(f.read(), language="text")
+            if st.button("🔄 Refresh Logs"):
+                st.rerun()

@@ -56,3 +56,17 @@ else:
         df = df[df["status"].isin(status_filter)]
 
     st.dataframe(df, use_container_width=True)
+
+repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+with st.sidebar:
+    st.markdown("---")
+    st.subheader("⚙️ System Status")
+    st.success("FastAPI Backend: **Online**")
+    
+    log_path = os.path.join(repo_root, "fastapi_server.log")
+    if os.path.exists(log_path):
+        with st.expander("📝 View Backend Logs", expanded=False):
+            with open(log_path, "r", encoding="utf-8") as f:
+                st.code(f.read(), language="text")
+            if st.button("🔄 Refresh Logs"):
+                st.rerun()

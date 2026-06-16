@@ -144,3 +144,16 @@ if st.button("Run retrieval", use_container_width=True) and query:
         st.markdown(f"**{item['memory_id']}**")
         st.write(item["raw_content"])
         st.caption(" | ".join(item["reasons"]))
+
+with st.sidebar:
+    st.markdown("---")
+    st.subheader("⚙️ System Status")
+    st.success("FastAPI Backend: **Online**")
+    
+    log_path = os.path.join(repo_root, "fastapi_server.log")
+    if os.path.exists(log_path):
+        with st.expander("📝 View Backend Logs", expanded=False):
+            with open(log_path, "r", encoding="utf-8") as f:
+                st.code(f.read(), language="text")
+            if st.button("🔄 Refresh Logs"):
+                st.rerun()
