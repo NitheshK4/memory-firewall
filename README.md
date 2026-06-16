@@ -1,12 +1,3 @@
----
-title: Memory Firewall
-emoji: 🛡️
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
----
-
 # Memory Firewall
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -14,7 +5,7 @@ app_port: 7860
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 > [!NOTE]
-> **Live Demo**: [https://1b50a584a1351d.lhr.life](https://1b50a584a1351d.lhr.life) (temporary tunnel link)
+> **Live API / Interactive Docs**: [https://memory-firewall-api.onrender.com/docs](https://memory-firewall-api.onrender.com/docs)
 
 Memory Firewall is a runnable MVP for defending long-term memory in AI agents.
 It intercepts memory writes and memory retrievals, scores them for risk, records
