@@ -153,7 +153,6 @@ if st.button("Run retrieval", use_container_width=True) and query:
 with st.sidebar:
     st.markdown("---")
     st.subheader("⚙️ System Status")
-    st.success("FastAPI Backend: **Online**")
     
     log_path = os.path.join(repo_root, "fastapi_server.log")
     if os.path.exists(log_path):

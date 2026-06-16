@@ -61,7 +61,6 @@ repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 with st.sidebar:
     st.markdown("---")
     st.subheader("⚙️ System Status")
-    st.success("FastAPI Backend: **Online**")
     
     log_path = os.path.join(repo_root, "fastapi_server.log")
     if os.path.exists(log_path):
