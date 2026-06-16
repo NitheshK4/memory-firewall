@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 
-from apps.dashboard.api_helper import API_BASE_URL as API_BASE, get_headers
+from api_helper import API_BASE_URL as API_BASE, get_headers
 
 st.set_page_config(page_title="Policy Events", page_icon="📋", layout="wide")
 st.title("📋 Policy Events")

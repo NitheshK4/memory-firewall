@@ -1,7 +1,7 @@
 import streamlit as st
 import httpx
 
-from apps.dashboard.api_helper import API_BASE_URL, get_headers
+from api_helper import API_BASE_URL, get_headers
 
 
 def get_json(path: str):

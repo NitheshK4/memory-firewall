@@ -6,7 +6,7 @@ st.set_page_config(page_title="Retrieval Risks", page_icon="🔍", layout="wide"
 st.title("🔍 Retrieval Risk Monitor")
 st.caption("Inspect the risk profile of memories served during retrieval queries.")
 
-from apps.dashboard.api_helper import API_BASE_URL as API_BASE, get_headers
+from api_helper import API_BASE_URL as API_BASE, get_headers
 
 
 st.subheader("Run a retrieval query")

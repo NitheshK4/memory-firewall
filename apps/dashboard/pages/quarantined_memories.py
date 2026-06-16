@@ -5,7 +5,7 @@ st.title("🔒 Quarantined Memories")
 st.caption("Review memory items flagged for human approval before they enter the agent's memory store.")
 
 import requests
-from apps.dashboard.api_helper import API_BASE_URL as API_BASE, get_headers
+from api_helper import API_BASE_URL as API_BASE, get_headers
 
 
 try:
