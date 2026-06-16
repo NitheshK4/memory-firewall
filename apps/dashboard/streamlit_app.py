@@ -102,7 +102,7 @@ if not quarantine:
     st.info("No quarantined memories right now. Use 'Seed quarantined memory' above to create one.")
 
 for memory in quarantine:
-    with st.expander(f"{memory['memory_id']} | trust {memory['trust_score']:.2f}", expanded=False):
+    with st.expander(f"{memory['memory_id']} | trust {memory.get('trust_score', 0.0):.2f}", expanded=False):
         st.write(memory["raw_content"])
         if memory["flags"]:
             st.write("Flags:", ", ".join(memory["flags"]))
@@ -129,7 +129,7 @@ if not all_memories:
     st.info("No memories stored yet.")
 else:
     for memory in all_memories[:10]:
-        badge = f"{memory['status']} | trust {memory['trust_score']:.2f}"
+        badge = f"{memory.get('status', 'unknown')} | trust {memory.get('trust_score', 0.0):.2f}"
         with st.expander(f"{memory['memory_id']} | {badge}", expanded=False):
             st.write(memory["raw_content"])
             st.caption(f"source: {memory['provenance']['source_type']} | actor: {memory['provenance']['actor']}")

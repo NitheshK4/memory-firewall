@@ -30,7 +30,7 @@ if not memories:
 else:
     st.metric("Quarantined", len(memories))
     for mem in memories:
-        with st.expander(f"🆔 {mem['memory_id']} · trust={mem.get('trust_score', '?'):.2f}"):
+        with st.expander(f"🆔 {mem['memory_id']} · trust={mem.get('trust_score', 0.0):.2f}"):
             st.write("**Content:**", mem.get("raw_content", "—"))
             st.write("**Flags:**", ", ".join(mem.get("flags", [])) or "none")
             st.write("**Claims:**")

@@ -1,0 +1,7 @@
+{
+  "python.analysis.extraPaths": [
+    "apps/dashboard",
+    "apps/dashboard/pages"
+  ],
+  "python.analysis.typeCheckingMode": "basic"
+}
