@@ -1,0 +1,7 @@
+{
+  "include": ["apps"],
+  "extraPaths": [
+    "apps/dashboard"
+  ],
+  "reportMissingImports": false
+}

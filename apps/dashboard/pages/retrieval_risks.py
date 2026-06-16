@@ -10,7 +10,7 @@ if dashboard_dir not in sys.path:
 import requests
 import streamlit as st
 
-from api_helper import API_BASE_URL as API_BASE, get_headers
+from api_helper import API_BASE_URL as API_BASE, get_headers  # type: ignore[import]
 
 st.set_page_config(page_title="Retrieval Risks", page_icon="🔍", layout="wide")
 st.title("🔍 Retrieval Risk Monitor")

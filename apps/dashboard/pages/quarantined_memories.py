@@ -10,7 +10,7 @@ if dashboard_dir not in sys.path:
 import streamlit as st
 import requests
 
-from api_helper import API_BASE_URL as API_BASE, get_headers
+from api_helper import API_BASE_URL as API_BASE, get_headers  # type: ignore[import]
 
 st.set_page_config(page_title="Quarantined Memories", page_icon="🔒", layout="wide")
 st.title("🔒 Quarantined Memories")

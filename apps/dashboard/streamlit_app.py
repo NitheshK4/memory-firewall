@@ -12,7 +12,7 @@ if repo_root not in sys.path:
 import streamlit as st
 import httpx
 
-from api_helper import API_BASE_URL, get_headers
+from api_helper import API_BASE_URL, get_headers  # type: ignore[import]
 
 
 def get_json(path: str):
