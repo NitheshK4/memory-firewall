@@ -1,3 +1,12 @@
+import sys
+import os
+
+# Set up paths so that imports work reliably on Streamlit Community Cloud
+pages_dir = os.path.dirname(os.path.abspath(__file__))
+dashboard_dir = os.path.dirname(pages_dir)
+if dashboard_dir not in sys.path:
+    sys.path.insert(0, dashboard_dir)
+
 import requests
 import streamlit as st
 

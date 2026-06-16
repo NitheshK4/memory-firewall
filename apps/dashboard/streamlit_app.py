@@ -1,3 +1,14 @@
+import sys
+import os
+
+# Set up paths so that imports work reliably on Streamlit Community Cloud
+dashboard_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(os.path.dirname(dashboard_dir))
+if dashboard_dir not in sys.path:
+    sys.path.insert(0, dashboard_dir)
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
 import streamlit as st
 import httpx
 
@@ -22,10 +33,24 @@ st.set_page_config(page_title="Memory Firewall", layout="wide")
 st.title("Memory Firewall Console")
 st.caption("Review quarantined memories and test trust-aware retrieval.")
 
-health = get_json("/health")
-all_memories_data = get_json("/api/v1/memories")
-all_memories = all_memories_data.get("items", [])
-status_breakdown = health.get("status_breakdown", {})
+try:
+    health = get_json("/health")
+    all_memories_data = get_json("/api/v1/memories")
+    all_memories = all_memories_data.get("items", [])
+    status_breakdown = health.get("status_breakdown", {})
+except Exception as e:
+    st.error(f"⚠️ **Could not connect to the FastAPI backend service** ({e})")
+    
+    log_path = os.path.join(repo_root, "fastapi_server.log")
+    if os.path.exists(log_path):
+        st.info("Here are the logs from the background FastAPI server (`fastapi_server.log`) to help diagnose:")
+        with open(log_path, "r", encoding="utf-8") as f:
+            st.code(f.read(), language="text")
+    else:
+        st.warning("No background server logs found. Make sure uvicorn is installed and available.")
+    
+    st.info("💡 **Troubleshooting Tip:** If you see Python import errors, try manually starting the backend from your workspace terminal with: `poetry run uvicorn apps.api.app.main:app --reload`.")
+    st.stop()
 
 metric_columns = st.columns(4)
 metric_columns[0].metric("Stored memories", health["memory_count"])

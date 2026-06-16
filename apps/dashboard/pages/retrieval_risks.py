@@ -1,12 +1,20 @@
+import sys
 import os
+
+# Set up paths so that imports work reliably on Streamlit Community Cloud
+pages_dir = os.path.dirname(os.path.abspath(__file__))
+dashboard_dir = os.path.dirname(pages_dir)
+if dashboard_dir not in sys.path:
+    sys.path.insert(0, dashboard_dir)
+
 import requests
 import streamlit as st
+
+from api_helper import API_BASE_URL as API_BASE, get_headers
 
 st.set_page_config(page_title="Retrieval Risks", page_icon="🔍", layout="wide")
 st.title("🔍 Retrieval Risk Monitor")
 st.caption("Inspect the risk profile of memories served during retrieval queries.")
-
-from api_helper import API_BASE_URL as API_BASE, get_headers
 
 
 st.subheader("Run a retrieval query")

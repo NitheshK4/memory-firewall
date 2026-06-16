@@ -1,11 +1,20 @@
+import sys
+import os
+
+# Set up paths so that imports work reliably on Streamlit Community Cloud
+pages_dir = os.path.dirname(os.path.abspath(__file__))
+dashboard_dir = os.path.dirname(pages_dir)
+if dashboard_dir not in sys.path:
+    sys.path.insert(0, dashboard_dir)
+
 import streamlit as st
+import requests
+
+from api_helper import API_BASE_URL as API_BASE, get_headers
 
 st.set_page_config(page_title="Quarantined Memories", page_icon="🔒", layout="wide")
 st.title("🔒 Quarantined Memories")
 st.caption("Review memory items flagged for human approval before they enter the agent's memory store.")
-
-import requests
-from api_helper import API_BASE_URL as API_BASE, get_headers
 
 
 try:

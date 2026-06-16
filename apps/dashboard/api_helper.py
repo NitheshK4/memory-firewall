@@ -26,6 +26,21 @@ def ensure_api_running():
     # Start FastAPI backend process using same python environment
     print("FastAPI backend not running. Starting background server...", flush=True)
     try:
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        env = os.environ.copy()
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] = f"{repo_root}{os.path.pathsep}{env['PYTHONPATH']}"
+        else:
+            env["PYTHONPATH"] = repo_root
+
+        log_path = os.path.join(repo_root, "fastapi_server.log")
+        # Open in write mode to truncate/clear logs on each restart attempt
+        with open(log_path, "w", encoding="utf-8") as log_file:
+            log_file.write(f"--- Starting uvicorn background process at {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+            log_file.flush()
+
+        log_file_append = open(log_path, "a", encoding="utf-8")
+
         subprocess.Popen(
             [
                 sys.executable,
@@ -37,8 +52,10 @@ def ensure_api_running():
                 "--port",
                 "8000",
             ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            cwd=repo_root,
+            env=env,
+            stdout=log_file_append,
+            stderr=log_file_append,
         )
         # Wait up to 10 seconds for it to start
         for _ in range(20):
