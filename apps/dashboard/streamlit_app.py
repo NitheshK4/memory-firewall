@@ -1,21 +1,7 @@
-import os
-
-import httpx
 import streamlit as st
+import httpx
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "")
-
-
-def get_headers() -> dict[str, str]:
-    import uuid
-    headers = {}
-    if API_KEY:
-        headers["X-API-Key"] = API_KEY
-    if "session_id" not in st.session_state:
-        st.session_state["session_id"] = str(uuid.uuid4())
-    headers["X-Session-ID"] = st.session_state["session_id"]
-    return headers
+from apps.dashboard.api_helper import API_BASE_URL, get_headers
 
 
 def get_json(path: str):
