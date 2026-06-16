@@ -5,7 +5,7 @@
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 > [!NOTE]
-> **Live API / Interactive Docs**: [https://memory-firewall-api.onrender.com/docs](https://memory-firewall-api.onrender.com/docs)
+> **Live Demo**: [https://memory-firewall-nk.streamlit.app/](https://memory-firewall-nk.streamlit.app/)
 
 Memory Firewall is a runnable MVP for defending long-term memory in AI agents.
 It intercepts memory writes and memory retrievals, scores them for risk, records
