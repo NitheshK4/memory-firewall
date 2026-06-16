@@ -24,7 +24,8 @@ def get_headers() -> dict[str, str]:
 try:
     resp = requests.get(f"{API_BASE}/api/v1/memories", headers=get_headers(), timeout=5)
     resp.raise_for_status()
-    memories = resp.json()
+    memories_data = resp.json()
+    memories = memories_data.get("items", [])
 except Exception as e:
     st.error(f"Could not reach API: {e}")
     memories = []
