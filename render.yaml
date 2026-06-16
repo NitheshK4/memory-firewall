@@ -1,0 +1,36 @@
+services:
+  # 1. FastAPI Backend Service
+  - type: web
+    name: memory-firewall-api
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: uvicorn apps.api.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: USE_OPENAI
+        value: "false" # Set to true and supply OPENAI_API_KEY in Render if utilizing LLM checks
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+
+  # 2. Streamlit Dashboard Service
+  - type: web
+    name: memory-firewall-dashboard
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: API_BASE_URL="http://$API_HOST:$API_PORT" streamlit run apps/dashboard/streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: API_HOST
+        fromService:
+          name: memory-firewall-api
+          type: web
+          property: host
+      - key: API_PORT
+        fromService:
+          name: memory-firewall-api
+          type: web
+          property: port
