@@ -45,7 +45,7 @@ def ensure_api_running():
             [
                 sys.executable,
                 "-c",
-                "import sys; sys.path.insert(0, sys.argv[1]); import uvicorn; uvicorn.run('apps.api.app.main:app', host='127.0.0.1', port=8000)",
+                "import sys, os; repo=sys.argv[1]; sys.path.insert(0, repo); print('REPOROOT:', repo); print('PATH:', sys.path); print('CONTENTS:', os.listdir(repo) if os.path.exists(repo) else 'NOT FOUND'); import uvicorn; uvicorn.run('apps.api.app.main:app', host='127.0.0.1', port=8000)",
                 repo_root,
             ],
             cwd=repo_root,
