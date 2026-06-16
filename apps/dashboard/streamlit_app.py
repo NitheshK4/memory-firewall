@@ -139,16 +139,35 @@ else:
                 st.write("Contradictions:", "; ".join(memory["contradictions"]))
 
 st.subheader("Retrieval Playground")
-query = st.text_input("Ask for memory context")
-if st.button("Run retrieval", use_container_width=True) and query:
-    results = post_json(
-        "/api/v1/retrieval/query",
-        {"query": query, "actor": "streamlit", "max_results": 5},
-    )
-    for item in results["results"]:
-        st.markdown(f"**{item['memory_id']}**")
-        st.write(item["raw_content"])
-        st.caption(" | ".join(item["reasons"]))
+query = st.text_input("Ask for memory context", key="retrieval_query")
+if st.button("Run retrieval", use_container_width=True):
+    if not query.strip():
+        st.warning("⚠️ Please type a query above before running retrieval.")
+    else:
+        try:
+            results = post_json(
+                "/api/v1/retrieval/query",
+                {"query": query, "actor": "streamlit", "max_results": 5},
+            )
+            st.session_state["retrieval_results"] = results.get("results", [])
+            st.session_state["retrieval_query_used"] = query
+        except Exception as e:
+            st.error(f"⚠️ Retrieval failed: {e}")
+            st.session_state["retrieval_results"] = []
+
+if "retrieval_results" in st.session_state:
+    items = st.session_state["retrieval_results"]
+    st.caption(f"Results for: *{st.session_state.get('retrieval_query_used', '')}*")
+    if not items:
+        st.info("No memories matched your query.")
+    for item in items:
+        trust = item.get("trust_score", 0.0)
+        risk_icon = "🔴" if trust < 0.3 else "🟡" if trust < 0.6 else "🟢"
+        with st.expander(f"{risk_icon} {item['memory_id']} — trust {trust:.2f} · {item.get('status', '?')}"):
+            st.write(item.get("raw_content", "—"))
+            reasons = item.get("reasons", [])
+            if reasons:
+                st.caption(" | ".join(reasons))
 
 with st.sidebar:
     st.markdown("---")
