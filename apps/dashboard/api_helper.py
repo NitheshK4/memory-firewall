@@ -41,16 +41,12 @@ def ensure_api_running():
 
         log_file_append = open(log_path, "a", encoding="utf-8")
 
-        subprocess.Popen(
+        proc = subprocess.Popen(
             [
                 sys.executable,
-                "-m",
-                "uvicorn",
-                "apps.api.app.main:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "8000",
+                "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]); import uvicorn; uvicorn.run('apps.api.app.main:app', host='127.0.0.1', port=8000)",
+                repo_root,
             ],
             cwd=repo_root,
             env=env,
@@ -59,6 +55,9 @@ def ensure_api_running():
         )
         # Wait up to 10 seconds for it to start
         for _ in range(20):
+            if proc.poll() is not None:
+                print(f"FastAPI background process exited early with code {proc.returncode}.", flush=True)
+                break
             try:
                 r = httpx.get(health_url, timeout=0.5)
                 if r.status_code == 200:
