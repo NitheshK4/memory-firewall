@@ -18,7 +18,7 @@ st.caption("Audit trail of every policy decision made by the Memory Firewall.")
 
 
 try:
-    resp = requests.get(f"{API_BASE}/api/v1/memories", headers=get_headers(), timeout=5)
+    resp = requests.get(f"{API_BASE}/api/v1/memories", headers=get_headers(), timeout=60)
     resp.raise_for_status()
     memories_data = resp.json()
     memories = memories_data.get("items", [])

@@ -18,7 +18,7 @@ st.caption("Review memory items flagged for human approval before they enter the
 
 
 try:
-    resp = requests.get(f"{API_BASE}/api/v1/review/quarantine", headers=get_headers(), timeout=5)
+    resp = requests.get(f"{API_BASE}/api/v1/review/quarantine", headers=get_headers(), timeout=60)
     resp.raise_for_status()
     memories = resp.json()
 except Exception as e:
@@ -44,7 +44,7 @@ else:
                         f"{API_BASE}/api/v1/review/{mem['memory_id']}/decision",
                         json={"action": "approve", "reviewer": "dashboard"},
                         headers=get_headers(),
-                        timeout=5,
+                        timeout=60,
                     )
                     st.success("Approved" if r.ok else f"Error: {r.text}")
                     st.rerun()
@@ -54,7 +54,7 @@ else:
                         f"{API_BASE}/api/v1/review/{mem['memory_id']}/decision",
                         json={"action": "reject", "reviewer": "dashboard"},
                         headers=get_headers(),
-                        timeout=5,
+                        timeout=60,
                     )
                     st.success("Rejected" if r.ok else f"Error: {r.text}")
                     st.rerun()

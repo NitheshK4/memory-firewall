@@ -6,7 +6,11 @@ import uuid
 import httpx
 import streamlit as st
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+# Detect if running on Streamlit Cloud and default to deployed Render URL if so
+is_streamlit_cloud = "STREAMLIT_SHARING_MODE" in os.environ or os.environ.get("STREAMLIT_SHARING_MODE") is not None
+DEFAULT_API_URL = "https://memory-firewall-api.onrender.com" if is_streamlit_cloud else "http://localhost:8000"
+
+API_BASE_URL = os.getenv("API_BASE_URL", DEFAULT_API_URL)
 API_KEY = os.getenv("API_KEY", "")
 
 def ensure_api_running():

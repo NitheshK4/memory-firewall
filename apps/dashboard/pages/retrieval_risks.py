@@ -31,7 +31,7 @@ if st.button("🔎 Search"):
                 f"{API_BASE}/api/v1/retrieval/query",
                 json={"query": query, "actor": actor, "max_results": max_results},
                 headers=get_headers(),
-                timeout=10,
+                timeout=60,
             )
             resp.raise_for_status()
             data = resp.json()

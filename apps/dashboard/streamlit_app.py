@@ -16,14 +16,14 @@ from api_helper import API_BASE_URL, get_headers  # type: ignore[import]
 
 
 def get_json(path: str):
-    with httpx.Client(timeout=10.0) as client:
+    with httpx.Client(timeout=60.0) as client:
         response = client.get(f"{API_BASE_URL}{path}", headers=get_headers())
         response.raise_for_status()
         return response.json()
 
 
 def post_json(path: str, payload: dict):
-    with httpx.Client(timeout=10.0) as client:
+    with httpx.Client(timeout=60.0) as client:
         response = client.post(f"{API_BASE_URL}{path}", json=payload, headers=get_headers())
         response.raise_for_status()
         return response.json()
