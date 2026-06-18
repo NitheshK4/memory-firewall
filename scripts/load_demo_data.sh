@@ -2,7 +2,7 @@
 # load_demo_data.sh — Seed the running API with demo memories.
 set -euo pipefail
 
-API_BASE="${API_BASE_URL:-http://localhost:8000}"
+API_BASE="${API_BASE_URL:-http://127.0.0.1:8000}"
 ENDPOINT="${API_BASE}/api/v1/memories/"
 
 echo "==> Loading benign demo memories into ${ENDPOINT} ..."

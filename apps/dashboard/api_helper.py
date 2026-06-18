@@ -6,9 +6,21 @@ import uuid
 import httpx
 import streamlit as st
 
+# Locate repo_root relative to this file
+dashboard_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(os.path.dirname(dashboard_dir))
+
+# Attempt to load local environment variables from .env
+env_path = os.path.join(repo_root, ".env")
+try:
+    from dotenv import load_dotenv
+    load_dotenv(env_path)
+except ImportError:
+    pass
+
 # Detect if running on Streamlit Cloud and default to deployed Render URL if so
 is_streamlit_cloud = "STREAMLIT_SHARING_MODE" in os.environ or os.environ.get("STREAMLIT_SHARING_MODE") is not None
-DEFAULT_API_URL = "https://memory-firewall-api.onrender.com" if is_streamlit_cloud else "http://localhost:8000"
+DEFAULT_API_URL = "https://memory-firewall-api.onrender.com" if is_streamlit_cloud else "http://127.0.0.1:8000"
 
 API_BASE_URL = os.getenv("API_BASE_URL", DEFAULT_API_URL)
 API_KEY = os.getenv("API_KEY", "")
@@ -27,10 +39,9 @@ def ensure_api_running():
     except Exception:
         pass
 
-    # Start FastAPI backend process using same python environment
+    # Start FastAPI backend process using same python environment or venv if available
     print("FastAPI backend not running. Starting background server...", flush=True)
     try:
-        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         env = os.environ.copy()
         if "PYTHONPATH" in env:
             env["PYTHONPATH"] = f"{repo_root}{os.path.pathsep}{env['PYTHONPATH']}"
@@ -45,11 +56,20 @@ def ensure_api_running():
 
         log_file_append = open(log_path, "a", encoding="utf-8")
 
+        # Determine the Python executable to use (prefer local .venv python if available)
+        python_exe = sys.executable
+        venv_python_unix = os.path.join(repo_root, ".venv", "bin", "python")
+        venv_python_win = os.path.join(repo_root, ".venv", "Scripts", "python.exe")
+        if os.path.exists(venv_python_unix):
+            python_exe = venv_python_unix
+        elif os.path.exists(venv_python_win):
+            python_exe = venv_python_win
+
         proc = subprocess.Popen(
             [
-                sys.executable,
+                python_exe,
                 "-c",
-                "import sys, os; repo=sys.argv[1]; sys.path.insert(0, repo); print('REPOROOT:', repo); print('PATH:', sys.path); print('CONTENTS:', os.listdir(repo) if os.path.exists(repo) else 'NOT FOUND'); import uvicorn; uvicorn.run('apps.api.app.main:app', host='127.0.0.1', port=8000)",
+                "import sys, os; repo=sys.argv[1]; sys.path.insert(0, repo); import uvicorn; uvicorn.run('apps.api.app.main:app', host='127.0.0.1', port=8000)",
                 repo_root,
             ],
             cwd=repo_root,
