@@ -1,5 +1,7 @@
 """Unit tests for LocalSemanticEmbeddingStore and build_vector_store settings factory."""
 
+from unittest.mock import patch
+import pytest
 from apps.api.app.config import Settings
 from apps.api.app.db.vector import (
     VectorDocument,
@@ -8,6 +10,30 @@ from apps.api.app.db.vector import (
     OpenAIEmbeddingStore,
     build_vector_store,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_sentence_transformer():
+    class MockSentenceTransformer:
+        def __init__(self, model_name: str) -> None:
+            self.model_name = model_name
+
+        def encode(self, text: str) -> list[float]:
+            # Mapping specific texts to unit vectors to satisfy test similarity assertions
+            if "drinking cold beer" in text or "beer and other beverages" in text:
+                return [1.0, 0.0, 0.0]
+            elif "weather forecast" in text or "heavy rain" in text:
+                return [0.0, 1.0, 0.0]
+            elif "Authentication requires" in text or "valid username" in text:
+                return [0.0, 0.0, 1.0]
+            elif "alcohol and drinks" in text:
+                return [0.5, 0.0, 0.0]
+            elif "login credentials secret" in text:
+                return [0.0, 0.0, 0.5]
+            return [0.0, 0.0, 0.0]
+
+    with patch("sentence_transformers.SentenceTransformer", MockSentenceTransformer):
+        yield
 
 
 def test_local_semantic_embedding_store_basic() -> None:
