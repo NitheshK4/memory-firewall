@@ -35,23 +35,54 @@ st.set_page_config(page_title="Memory Firewall", layout="wide")
 st.title("Memory Firewall Console")
 st.caption("Review quarantined memories and test trust-aware retrieval.")
 
+import time
+
+is_local = "localhost" in API_BASE_URL or "127.0.0.1" in API_BASE_URL
+
+health = None
+all_memories_data = None
+all_memories = []
+status_breakdown = {}
+
 try:
     health = get_json("/health")
     all_memories_data = get_json("/api/v1/memories")
     all_memories = all_memories_data.get("items", [])
     status_breakdown = health.get("status_breakdown", {})
 except Exception as e:
+    # If the backend is remote, it might just be asleep (Render free tier cold start).
+    # Try to wake it up and retry connection for up to 60 seconds.
+    if not is_local:
+        with st.spinner("⏳ The remote backend service (Render) is waking up. This may take up to 60 seconds on the free tier..."):
+            for attempt in range(12):
+                time.sleep(5)
+                try:
+                    health = get_json("/health")
+                    all_memories_data = get_json("/api/v1/memories")
+                    all_memories = all_memories_data.get("items", [])
+                    status_breakdown = health.get("status_breakdown", {})
+                    st.success("✅ Connected to backend!")
+                    st.rerun()
+                except Exception:
+                    pass
+
+    # If still failing, show a contextual error page
     st.error(f"⚠️ **Could not connect to the FastAPI backend service** ({e})")
+    st.markdown(f"**Backend URL:** `{API_BASE_URL}`")
     
-    log_path = os.path.join(repo_root, "fastapi_server.log")
-    if os.path.exists(log_path):
-        st.info("Here are the logs from the background FastAPI server (`fastapi_server.log`) to help diagnose:")
-        with open(log_path, "r", encoding="utf-8") as f:
-            st.code(f.read(), language="text")
+    if is_local:
+        log_path = os.path.join(repo_root, "fastapi_server.log")
+        if os.path.exists(log_path):
+            st.info("Here are the logs from the background FastAPI server (`fastapi_server.log`) to help diagnose:")
+            with open(log_path, "r", encoding="utf-8") as f:
+                st.code(f.read(), language="text")
+        else:
+            st.warning("No background server logs found. Make sure uvicorn is installed and available.")
+        
+        st.info("💡 **Troubleshooting Tip:** If you see Python import errors, try manually starting the backend from your workspace terminal with: `poetry run uvicorn apps.api.app.main:app --reload`.")
     else:
-        st.warning("No background server logs found. Make sure uvicorn is installed and available.")
+        st.info("💡 **Troubleshooting Tip:** The remote backend service at Render might be sleeping or down. Please wait a minute and refresh the page.")
     
-    st.info("💡 **Troubleshooting Tip:** If you see Python import errors, try manually starting the backend from your workspace terminal with: `poetry run uvicorn apps.api.app.main:app --reload`.")
     st.stop()
 
 metric_columns = st.columns(4)
