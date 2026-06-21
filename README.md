@@ -301,5 +301,5 @@ For a full working script, see [examples/quickstart.py](file:///Users/nitheshkum
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](file:///Users/nitheshkumar/Documents/Memory%20firewall/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](file:///Users/nitheshkumar/Documents/Memory%20firewall/LICENSE) file for details
 
