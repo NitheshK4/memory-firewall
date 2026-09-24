@@ -9,6 +9,22 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-24
+
+### Added
+- **`BaseConnector` & Ingest Schema Protocol** (`packages/connectors/base_connector.py`) — unified abstract base class and `IngestPayload` schema for all data source adapters.
+- **`GitHubConnector`** (`packages/connectors/github_connector.py`) — ingest issues, PR descriptions, and discussion comments via GitHub REST API with tag extraction.
+- **`WebhookConnector`** (`packages/connectors/webhook_connector.py`) — inbound generic webhook receiver with HMAC-SHA256 signature verification.
+- **`markdown_exfiltration` Detector** in `RiskService` — blocks markdown images `![tracker](https://...)` and HTML `<img src="..." />` zero-pixel tracking vectors designed to exfiltrate context on render.
+- **`delimiter_injection` Detector** in `RiskService` — catches boundary spoofing tokens like `[SYSTEM]`, `[INST]`, `<<SYS>>`, and `---BEGIN INSTRUCTION---`.
+- **String Similarity & Fuzzy Matching Utilities** (`packages/shared/utils/similarity.py`) — Wagner-Fischer Levenshtein distance, normalized edit distance, n-gram Jaccard similarity, token overlap ratios, and composite fuzzy matching.
+- **Typed Python Client SDK** (`packages/client/client.py`) — synchronous `MemoryFirewallClient` for Python with health, memory CRUD, policy evaluation, retrieval queries, and human review decision flows.
+- **`mfw` Command-Line Interface** (`packages/cli/main.py`) — local offline policy evaluation (`mfw check`), API health checks (`mfw health`), and audit summary viewer (`mfw audit stats`).
+- **Prometheus Metrics Exporter** (`/metrics` & `/api/v1/metrics`) — exposition format tracking total memory writes by action, retrieval queries, dedup skips, and active memories count.
+- **Performance & Latency Benchmarking Suite** (`evals/benchmarks/benchmark_pipeline.py`) — automated p50, p95, p99 latency and throughput (ops/sec) measurement across sanitisation, claim extraction, write pipeline, and read pipeline.
+- **Expanded GitHub Actions CI Matrix** — automated testing across Python 3.11, 3.12, 3.13, CodeQL security scanning, and package verification.
+- **LangChain & LlamaIndex Integration Recipes** (`examples/langchain_agent_firewall.py`, `examples/llamaindex_rag_firewall.py`) — step-by-step guides for guarding agent memory and RAG context retrieval.
+
 ### Added
 - `CONTRIBUTING.md` — developer setup guide, coding conventions, and PR process.
 - `CHANGELOG.md` — this file; tracks all notable changes going forward.
