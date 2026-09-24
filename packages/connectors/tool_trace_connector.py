@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -18,7 +18,7 @@ class ToolTraceEvent:
     output: str = ""
     actor: str = "agent"
     trace_id: str = ""
-    occurred_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    occurred_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_ingest_payload(self) -> dict:
         summary = (
