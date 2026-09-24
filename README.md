@@ -431,4 +431,5 @@ pytest
 ## 📄 License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+## Made with love
 
