@@ -23,8 +23,8 @@ class ClaimExtractor:
     failure or when OpenAI is disabled.
     """
 
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
+    def __init__(self, settings: Settings | None = None) -> None:
+        self.settings = settings or Settings()
         self._prompt_template: str | None = self._load_prompt()
 
     # ------------------------------------------------------------------ #

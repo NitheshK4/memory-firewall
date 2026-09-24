@@ -34,3 +34,6 @@ dependencies = [
 [tool.setuptools.packages.find]
 include = ["apps*", "packages*"]
 
+[project.scripts]
+mfw = "packages.cli.main:main"
+
