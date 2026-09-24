@@ -25,6 +25,8 @@ _VALID_FLAGS = {
     "write_burst",
     "obfuscation",
     "url_injection",
+    "markdown_exfiltration",
+    "delimiter_injection",
 }
 
 
@@ -71,6 +73,13 @@ class RiskService:
         re.compile(r"data:text/html", re.IGNORECASE),
         re.compile(r"javascript:", re.IGNORECASE),
         re.compile(r"vbscript:", re.IGNORECASE),
+    )
+    _MARKDOWN_EXFILTRATION_PATTERNS = (
+        re.compile(r"!\[.*?\]\((?:https?:|\/\/)[^\)]+\)", re.IGNORECASE),
+        re.compile(r"<img[^>]+src=[\"']?(?:https?:|\/\/)[^\"'>]+[\"']?", re.IGNORECASE),
+    )
+    _DELIMITER_INJECTION_PATTERNS = (
+        re.compile(r"(?:\[\/?(?:INST|SYS|SYSTEM|USER|ASSISTANT)\]|<\/?(?:system|user|im_start|im_end|assistant)>|---(?:BEGIN|END)\s+(?:INSTRUCTION|SYSTEM|PROMPT)---)", re.IGNORECASE),
     )
 
     def __init__(self, settings=None) -> None:
@@ -195,6 +204,18 @@ class RiskService:
             score += 0.45
             flags.append("url_injection")
             reasons.append("Content contains a script or data URL injection pattern")
+
+        # Markdown / HTML remote image exfiltration
+        if any(pat.search(content) for pat in self._MARKDOWN_EXFILTRATION_PATTERNS):
+            score += 0.50
+            flags.append("markdown_exfiltration")
+            reasons.append("Content contains markdown or HTML image exfiltration vector")
+
+        # Delimiter injection: fake instruction boundaries
+        if any(pat.search(content) for pat in self._DELIMITER_INJECTION_PATTERNS):
+            score += 0.40
+            flags.append("delimiter_injection")
+            reasons.append("Content contains artificial prompt delimiter boundaries")
 
         return RiskAssessment(
             score=min(score, 1.0),

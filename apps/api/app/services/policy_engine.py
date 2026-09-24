@@ -41,9 +41,14 @@ class PolicyEngine:
             # Untrusted sources (email, web, slack, etc.)
             if "exfiltration" in assessment.flags:
                 action = VerdictAction.BLOCK
+            elif "markdown_exfiltration" in assessment.flags:
+                action = VerdictAction.BLOCK
             elif "url_injection" in assessment.flags:
                 # Script/data-URI injection from untrusted source is always blocked
                 action = VerdictAction.BLOCK
+            elif "delimiter_injection" in assessment.flags:
+                # Delimiter boundary injection from untrusted sources is quarantined or blocked
+                action = VerdictAction.BLOCK if assessment.score >= 0.58 else VerdictAction.QUARANTINE
             elif "obfuscation" in assessment.flags and assessment.score >= 0.58:
                 # Obfuscated content with elevated risk score is blocked
                 action = VerdictAction.BLOCK
