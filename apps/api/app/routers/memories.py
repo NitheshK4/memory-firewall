@@ -18,13 +18,18 @@ class MemoryListResponse(BaseModel):
     items: list[StoredMemory]
 
 
+from apps.api.app.telemetry.metrics import metrics
+
+
 @router.post("", response_model=MemoryWriteResponse)
 def write_memory(
     request: MemoryWriteRequest,
     _auth: None = Depends(require_api_key),
     container: ServiceContainer = Depends(get_container),
 ) -> MemoryWriteResponse:
-    return container.write_firewall.run(request)
+    res = container.write_firewall.run(request)
+    metrics.inc_counter("memory_firewall_writes_total", labels={"action": res.verdict.action.value})
+    return res
 
 
 @router.get("", response_model=MemoryListResponse)
